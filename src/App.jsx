@@ -100,6 +100,8 @@ export default function WildCatch() {
     catchPct: 88, charLvl: 1,
   });
 
+  const [quiz, setQuiz] = useState(null); // null | { a, b, answer, wrong }
+
   function syncUi(msg, ok) {
     const s = gs.current;
     const req = XP_REQ[s.ballLvl - 1] === Infinity ? 999 : XP_REQ[s.ballLvl - 1];
@@ -432,6 +434,13 @@ export default function WildCatch() {
       }
     }
 
+    function triggerQuiz() {
+      const a = Math.floor(Math.random() * 9) + 1;
+      const b = Math.floor(Math.random() * 9) + 1;
+      s.phase = "quiz";
+      setQuiz({ a, b, answer: a + b, wrong: false });
+    }
+
     function spawnLevelUpEffect(x, y) {
       const cols = ["#FFD700","#FF80AB","#80D8FF","#CCFF90","#FFD740","#FFFFFF","#FF6E40"];
       for (let i = 0; i < 50; i++) {
@@ -466,6 +475,14 @@ export default function WildCatch() {
       drawBg(t);
 
       if (s.levelUpTimer > 0) s.levelUpTimer--;
+
+      if (s.phase === "quiz") {
+        // Game frozen during quiz — draw static scene only
+        if (s.monster) drawMonster(s.monster, t, false);
+        drawParticles();
+        drawPlayer(s.player.x, 0);
+        s.raf = requestAnimationFrame(loop); return;
+      }
 
       if (s.phase === "catching") {
         s.catchTimer += 16;
@@ -521,6 +538,11 @@ export default function WildCatch() {
 
           s.phase = "playing";
           s.monster = spawnMonster(s.ballLvl);
+
+          // Math quiz every 5 catches
+          if (s.totalCaught % 5 === 0) {
+            setTimeout(() => triggerQuiz(), 700);
+          }
         }
       } else if (s.phase === "escaping") {
         if (s.keys.has("ArrowLeft"))  s.player.x = Math.max(22, s.player.x - 5);
@@ -642,6 +664,16 @@ export default function WildCatch() {
     }
   };
 
+  function handleQuizAnswer(num) {
+    if (num === quiz.answer) {
+      setQuiz(null);
+      gs.current.phase = "playing";
+      showMsg("⭕ 정답! 계속 가자!", true);
+    } else {
+      setQuiz(prev => ({ ...prev, wrong: true }));
+    }
+  }
+
   const xpPct = Math.min(100, (ui.xp / ui.xpReq) * 100);
   const bc = BALL_COLORS[ui.ballLvl - 1];
   const charTheme = getCharTheme(ui.charLvl);
@@ -731,13 +763,18 @@ export default function WildCatch() {
         )}
       </div>
 
-      {/* Canvas */}
-      <canvas ref={canvasRef} width={GW} height={GH} style={{
-        display: "block", maxWidth: "95vw",
-        border: `2px solid ${bc}66`,
-        borderRadius: 8,
-        boxShadow: `0 0 30px ${bc}22, 0 8px 32px rgba(0,0,0,0.7)`,
-      }} />
+      {/* Canvas + Quiz overlay wrapper */}
+      <div style={{ position: "relative", display: "inline-block", maxWidth: "95vw" }}>
+        <canvas ref={canvasRef} width={GW} height={GH} style={{
+          display: "block", maxWidth: "95vw",
+          border: `2px solid ${bc}66`,
+          borderRadius: 8,
+          boxShadow: `0 0 30px ${bc}22, 0 8px 32px rgba(0,0,0,0.7)`,
+        }} />
+        {quiz && (
+          <QuizModal quiz={quiz} onAnswer={handleQuizAnswer} />
+        )}
+      </div>
 
       {/* Touch controls */}
       <div style={{ display: "flex", gap: 14, marginTop: 10, alignItems: "center" }}>
@@ -803,6 +840,110 @@ function StatBox({ label, value, sub, color }) {
       <div style={{ color: "#3A4A64", fontSize: 7, marginBottom: 3 }}>{label}</div>
       <div style={{ color, fontSize: 12, textShadow: `0 0 8px ${color}88` }}>{value}</div>
       {sub && <div style={{ color: "#445", fontSize: 7, marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function QuizModal({ quiz, onAnswer }) {
+  const [input, setInput] = useState("");
+
+  const submit = () => {
+    const num = parseInt(input, 10);
+    if (!isNaN(num)) onAnswer(num);
+  };
+
+  return (
+    <div style={{
+      position: "absolute", inset: 0,
+      background: "rgba(4,9,22,0.92)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      borderRadius: 8, zIndex: 10,
+    }}>
+      <div style={{
+        background: "linear-gradient(135deg, #0D1E3D, #1A2744)",
+        border: "2px solid #FFD70077",
+        borderRadius: 16, padding: "28px 32px",
+        textAlign: "center", width: 280,
+        boxShadow: "0 0 40px #FFD70044",
+        fontFamily: "'Noto Sans KR', monospace",
+      }}>
+        <div style={{ fontSize: 11, color: "#FFD700", marginBottom: 6, letterSpacing: 1 }}>
+          🧮 퀴즈 타임!
+        </div>
+        <div style={{ fontSize: 10, color: "#90A4AE", marginBottom: 20 }}>
+          5마리 포획 달성! 정답을 맞춰야 계속할 수 있어요
+        </div>
+
+        <div style={{
+          fontSize: 38, color: "white", fontWeight: "bold",
+          marginBottom: 20, letterSpacing: 4,
+          textShadow: "0 0 20px #FFD70088",
+        }}>
+          {quiz.a} + {quiz.b} = ?
+        </div>
+
+        <input
+          type="number"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && submit()}
+          autoFocus
+          style={{
+            width: "100%", padding: "10px 0",
+            fontSize: 28, textAlign: "center",
+            background: "rgba(255,255,255,0.08)",
+            border: quiz.wrong ? "2px solid #FF5252" : "2px solid #1E88E5",
+            borderRadius: 8, color: "white",
+            outline: "none", marginBottom: 12,
+            fontFamily: "monospace",
+            boxSizing: "border-box",
+          }}
+          placeholder="?"
+        />
+
+        {quiz.wrong && (
+          <div style={{
+            color: "#FF5252", fontSize: 11, marginBottom: 10,
+            animation: "pop 0.2s ease",
+          }}>
+            ❌ 틀렸어! 다시 해봐!
+          </div>
+        )}
+
+        <button
+          onClick={submit}
+          style={{
+            width: "100%", padding: "12px 0",
+            background: "linear-gradient(135deg, #1565C0, #1E88E5)",
+            border: "none", borderRadius: 8,
+            color: "white", fontSize: 14, fontWeight: "bold",
+            cursor: "pointer", letterSpacing: 1,
+            fontFamily: "'Noto Sans KR', monospace",
+            boxShadow: "0 0 16px #1E88E544",
+          }}
+        >
+          확인 ✓
+        </button>
+
+        {/* 숫자 패드 (모바일용) */}
+        <div style={{
+          display: "grid", gridTemplateColumns: "repeat(5, 1fr)",
+          gap: 6, marginTop: 14,
+        }}>
+          {Array.from({ length: 19 }, (_, i) => i).map(n => (
+            <button key={n} onClick={() => onAnswer(n)} style={{
+              padding: "8px 0", fontSize: 13, fontWeight: "bold",
+              background: n === quiz.answer && quiz.wrong
+                ? "rgba(105,240,174,0.15)" : "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.15)",
+              borderRadius: 6, color: "#CFD8DC", cursor: "pointer",
+              fontFamily: "monospace",
+            }}>
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
