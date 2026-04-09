@@ -1,16 +1,140 @@
-# React + Vite
+# 🌟 준이 캐치
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+몬스터를 잡고 레벨을 올리는 캐주얼 캐치 게임.
+포켓몬 스타일의 캐릭터가 볼을 던져 다양한 희귀도의 몬스터를 포획합니다.
+5마리 잡을 때마다 덧셈 퀴즈가 등장하는 교육적 요소도 포함되어 있습니다.
 
-Currently, two official plugins are available:
+**🔗 배포 주소:** [wildcatch.vercel.app](https://wildcatch.vercel.app)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## 게임 방법
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| 조작 | 키보드 | 모바일 |
+|------|--------|--------|
+| 이동 | ← → 방향키 | ◀ ▶ 버튼 |
+| 볼 던지기 | Space | 던지기! 버튼 |
 
-## Expanding the ESLint configuration
+1. 좌우로 이동해 몬스터 방향을 조준
+2. Space(또는 던지기 버튼)로 볼 발사
+3. 볼이 몬스터에 맞으면 포획 시도
+4. 성공하면 XP 획득 → 볼 레벨업
+5. **5마리마다 덧셈 퀴즈** 등장 — 정답을 맞춰야 게임 계속
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+---
+
+## 주요 기능
+
+### 몬스터 시스템
+10종의 몬스터, 희귀도 5단계:
+
+| 희귀도 | 몬스터 |
+|--------|--------|
+| Common | 꼬물이 🐛 꿀벌이 🐝 여우린 🦊 |
+| Uncommon | 토실이 🐰 너구리 🦝 |
+| Rare | 호랑이 🐯 유니콘 🦄 |
+| Epic | 드래곤 🐲 번개신 ⚡ |
+| Legend | 별이 🌟 |
+
+### 볼 레벨 시스템
+XP를 쌓아 볼을 업그레이드. 볼 레벨이 높을수록 포획률 상승.
+
+`WildBall → SuperBall → HyperBall → MegaBall → UltraBall → MasterBall → DarkBall → StarBall → CosmoBall → OmegaBall`
+
+### 캐릭터 레벨 시스템
+10마리 포획마다 캐릭터 레벨업 (최대 Lv.50).
+레벨 구간별 복장 색상이 바뀌며 파티클 이펙트와 오라 효과 발동.
+
+| 레벨 | 복장 |
+|------|------|
+| Lv. 1–10 | 블루 |
+| Lv. 11–20 | 레드 |
+| Lv. 21–30 | 퍼플 |
+| Lv. 31–40 | 골드 |
+| Lv. 41–49 | 다크 |
+| Lv. 50 | 특별 (주황 + 모자 별★) |
+
+### 낮/밤 배경 사이클
+2분 주기로 낮 ↔ 밤이 자동 전환.
+하늘 색상, 태양/달/별, 잔디 색이 부드럽게 변화.
+
+### 🧮 교육 퀴즈
+5마리 포획마다 1자리+1자리 덧셈 퀴즈 등장.
+키보드 입력 또는 숫자 패드 버튼으로 답 입력. 정답을 맞춰야 게임 재개.
+
+---
+
+## 기술 스택
+
+| 항목 | 내용 |
+|------|------|
+| 프레임워크 | React 19 |
+| 빌드 도구 | Vite 8 |
+| 렌더링 | HTML5 Canvas API |
+| 폰트 | Press Start 2P, Noto Sans KR (Google Fonts) |
+| 호스팅 | Vercel |
+
+---
+
+## 로컬 실행
+
+```bash
+# 의존성 설치
+npm install
+
+# 개발 서버 시작 (http://localhost:5173)
+npm run dev
+
+# 프로덕션 빌드
+npm run build
+```
+
+---
+
+## 파일 구조
+
+```
+wildcatch/
+├── src/
+│   ├── App.jsx       # 게임 전체 로직 + UI
+│   ├── main.jsx      # React 앱 진입점
+│   ├── App.css
+│   └── index.css
+├── public/
+├── index.html
+├── vite.config.js
+└── package.json
+```
+
+---
+
+## Changelog
+
+### v0.3.0 — 2026-04-09
+**교육 퀴즈 추가**
+- 5마리 포획마다 1자리+1자리 덧셈 퀴즈 팝업
+- 키보드 입력(Enter 제출) + 모바일 숫자 패드 지원
+- 틀리면 재시도, 맞추면 게임 재개 + 정답 메시지
+
+### v0.2.0 — 2026-04-09
+**한글화 및 게임플레이 대규모 업데이트**
+- 타이틀 변경: WILD CATCH → 🌟 준이 캐치 🌟
+- 몬스터 이름 전체 한글화 (꼬물이, 꿀벌이, 여우린 등)
+- 몬스터 네임태그 폰트 확대 (9px → 13px, Noto Sans KR 적용)
+- 캐릭터 양팔/양손 추가 (도트 아트 픽셀 스타일)
+- 낮/밤 배경 자동 전환 (2분 주기, 태양·달·별·잔디 색 변화)
+- 캐릭터 레벨 시스템 신설 (10마리마다 레벨업, 최대 Lv.50)
+  - 레벨 구간별 복장 색상 변화 (6단계 테마)
+  - 레벨업 시 파티클 50개 폭발 + 3초 오라 이펙트
+  - 상단 스탯 패널에 캐릭터 레벨 표시
+
+### v0.1.0 — 2026-04-08
+**최초 출시**
+- 10종 몬스터, 5단계 희귀도 시스템
+- 볼 10단계 레벨업 (XP 기반)
+- 포획률 계산 시스템 (볼 레벨 vs 몬스터 레벨)
+- 포획/실패 파티클 이펙트
+- 몬스터 도주 애니메이션
+- 터치 컨트롤 (모바일 지원)
+- 컬렉션 목록 (최근 30마리)
+- 야간 배경 (달, 별)
