@@ -8,16 +8,16 @@ const BALL_R = 11;
 const MON_R = 28;
 
 const MONSTERS = [
-  { level: 1,  emoji: "🐛", name: "Wormie",  rarity: "common"   },
-  { level: 2,  emoji: "🐝", name: "Buzzy",   rarity: "common"   },
-  { level: 3,  emoji: "🦊", name: "Foxlin",  rarity: "common"   },
-  { level: 4,  emoji: "🐰", name: "Bunnix",  rarity: "uncommon" },
-  { level: 5,  emoji: "🦝", name: "Raccoo",  rarity: "uncommon" },
-  { level: 6,  emoji: "🐯", name: "Tigrus",  rarity: "rare"     },
-  { level: 7,  emoji: "🦄", name: "Unara",   rarity: "rare"     },
-  { level: 8,  emoji: "🐲", name: "Drakos",  rarity: "epic"     },
-  { level: 9,  emoji: "⚡", name: "Zappix",  rarity: "epic"     },
-  { level: 10, emoji: "🌟", name: "Staria",  rarity: "legend"   },
+  { level: 1,  emoji: "🐛", name: "꼬물이",  rarity: "common"   },
+  { level: 2,  emoji: "🐝", name: "꿀벌이",  rarity: "common"   },
+  { level: 3,  emoji: "🦊", name: "여우린",  rarity: "common"   },
+  { level: 4,  emoji: "🐰", name: "토실이",  rarity: "uncommon" },
+  { level: 5,  emoji: "🦝", name: "너구리",  rarity: "uncommon" },
+  { level: 6,  emoji: "🐯", name: "호랑이",  rarity: "rare"     },
+  { level: 7,  emoji: "🦄", name: "유니콘",  rarity: "rare"     },
+  { level: 8,  emoji: "🐲", name: "드래곤",  rarity: "epic"     },
+  { level: 9,  emoji: "⚡", name: "번개신",  rarity: "epic"     },
+  { level: 10, emoji: "🌟", name: "별이",    rarity: "legend"   },
 ];
 
 const RARITY_COLOR = {
@@ -37,6 +37,16 @@ const BALL_NAMES = [
 
 // XP required to reach next ball level (index = ballLvl-1)
 const XP_REQ = [4, 9, 16, 26, 40, 60, 88, 125, 175, Infinity];
+
+// Character appearance themes by level tier
+function getCharTheme(lvl) {
+  if (lvl >= 50) return { body: "#FF8F00", legs: "#E65100", hat: "#BF360C", skin: "#FFE0B2", accent: "#FFD700" };
+  if (lvl >= 41) return { body: "#263238", legs: "#1C313A", hat: "#102027", skin: "#FFCC80", accent: "#CE93D8" };
+  if (lvl >= 31) return { body: "#F57F17", legs: "#E65100", hat: "#BF360C", skin: "#FFCC80", accent: "#FFCA28" };
+  if (lvl >= 21) return { body: "#6A1B9A", legs: "#4A148C", hat: "#38006B", skin: "#FFCC80", accent: "#E040FB" };
+  if (lvl >= 11) return { body: "#C62828", legs: "#B71C1C", hat: "#7F0000", skin: "#FFCC80", accent: "#FF5252" };
+  return { body: "#3949AB", legs: "#1A237E", hat: "#0D47A1", skin: "#FFCC80", accent: null };
+}
 
 function catchRate(ballLvl, monLvl) {
   if (ballLvl >= monLvl + 2) return 0.97;
@@ -67,7 +77,8 @@ export default function WildCatch() {
     ball:   { x: 0, y: 0, active: false },
     monster: null,
     ballLvl: 1, xp: 0,
-    phase: "playing",   // playing | catching
+    charLvl: 1, levelUpTimer: 0,
+    phase: "playing",   // playing | catching | escaping
     catchTimer: 0,
     keys: new Set(),
     raf: null,
@@ -86,7 +97,7 @@ export default function WildCatch() {
     ballLvl: 1, xp: 0, xpReq: XP_REQ[0],
     totalCaught: 0, message: "", msgOk: true,
     collection: [], ballName: BALL_NAMES[0],
-    catchPct: 88,
+    catchPct: 88, charLvl: 1,
   });
 
   function syncUi(msg, ok) {
@@ -101,10 +112,10 @@ export default function WildCatch() {
       collection: [...s.collection.slice(-30)],
       ballName: BALL_NAMES[s.ballLvl - 1],
       catchPct: pct,
+      charLvl: s.charLvl,
     });
   }
 
-  // message auto-clear
   const msgTimeout = useRef(null);
   function showMsg(text, ok) {
     clearTimeout(msgTimeout.current);
@@ -114,7 +125,7 @@ export default function WildCatch() {
       const req = XP_REQ[s.ballLvl - 1] === Infinity ? 999 : XP_REQ[s.ballLvl - 1];
       const mon = s.monster;
       const pct = mon ? Math.round(catchRate(s.ballLvl, mon.level) * 100) : 0;
-      setUi(prev => ({ ...prev, message: "", xp: s.xp, xpReq: req, totalCaught: s.totalCaught, catchPct: pct }));
+      setUi(prev => ({ ...prev, message: "", xp: s.xp, xpReq: req, totalCaught: s.totalCaught, catchPct: pct, charLvl: s.charLvl }));
     }, 2200);
   }
 
@@ -131,36 +142,84 @@ export default function WildCatch() {
       phase: Math.random() * Math.PI * 2,
     }));
 
-    // ── draw bg ──
+    // ── draw bg (day/night cycle) ──
     function drawBg(t) {
+      const cycleDuration = 120000; // 2-minute full cycle
+      const cyclePos = (t % cycleDuration) / cycleDuration;
+      // 0–0.45: day │ 0.45–0.55: dusk │ 0.55–0.95: night │ 0.95–1.0: dawn
+      let dayBlend;
+      if      (cyclePos < 0.45) dayBlend = 1;
+      else if (cyclePos < 0.55) dayBlend = 1 - (cyclePos - 0.45) / 0.10;
+      else if (cyclePos < 0.95) dayBlend = 0;
+      else                      dayBlend = (cyclePos - 0.95) / 0.05;
+
+      const lerp = (a, b, f) => Math.round(a + (b - a) * f);
+      const lerpRGB = (c1, c2, f) =>
+        `rgb(${lerp(c1[0],c2[0],f)},${lerp(c1[1],c2[1],f)},${lerp(c1[2],c2[2],f)})`;
+
+      // Sky gradient
+      const skyTop = lerpRGB([4, 9, 22],   [65, 130, 195], dayBlend);
+      const skyBot = lerpRGB([13, 30, 61],  [155, 205, 240], dayBlend);
       const g = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
-      g.addColorStop(0, "#040916");
-      g.addColorStop(1, "#0D1E3D");
+      g.addColorStop(0, skyTop);
+      g.addColorStop(1, skyBot);
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, GW, GROUND_Y);
 
-      s.stars.forEach(st => {
-        const a = 0.35 + 0.6 * Math.sin(t * 0.0015 + st.phase);
-        ctx.fillStyle = `rgba(255,255,255,${a.toFixed(2)})`;
-        ctx.beginPath();
-        ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
-        ctx.fill();
-      });
+      // Stars (night only)
+      const starAlpha = 1 - dayBlend;
+      if (starAlpha > 0.05) {
+        s.stars.forEach(st => {
+          const a = starAlpha * (0.35 + 0.6 * Math.sin(t * 0.0015 + st.phase));
+          ctx.fillStyle = `rgba(255,255,255,${a.toFixed(2)})`;
+          ctx.beginPath();
+          ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
 
-      // moon
-      ctx.shadowColor = "#FFF9C4"; ctx.shadowBlur = 28;
-      ctx.fillStyle = "#FFFFF0";
-      ctx.beginPath(); ctx.arc(GW - 58, 42, 24, 0, Math.PI * 2); ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = "#0D1E3D";
-      ctx.beginPath(); ctx.arc(GW - 48, 37, 19, 0, Math.PI * 2); ctx.fill();
+      // Moon (night)
+      if (dayBlend < 0.7) {
+        const moonA = Math.min(1, (1 - dayBlend) * 1.5);
+        ctx.globalAlpha = moonA;
+        ctx.shadowColor = "#FFF9C4"; ctx.shadowBlur = 28;
+        ctx.fillStyle = "#FFFFF0";
+        ctx.beginPath(); ctx.arc(GW - 58, 42, 24, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = lerpRGB([4, 9, 22], [65, 130, 195], dayBlend);
+        ctx.beginPath(); ctx.arc(GW - 48, 37, 19, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
 
-      // ground
-      ctx.fillStyle = "#132A0C";
+      // Sun (day)
+      if (dayBlend > 0.15) {
+        const sunA = Math.min(1, (dayBlend - 0.15) / 0.35);
+        ctx.globalAlpha = sunA;
+        ctx.shadowColor = "#FFD700"; ctx.shadowBlur = 40;
+        ctx.fillStyle = "#FFE566";
+        ctx.beginPath(); ctx.arc(80, 55, 26, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "#FFD700aa"; ctx.lineWidth = 3;
+        for (let i = 0; i < 8; i++) {
+          const ang = (i * Math.PI) / 4 + t * 0.0003;
+          ctx.beginPath();
+          ctx.moveTo(80 + Math.cos(ang) * 32, 55 + Math.sin(ang) * 32);
+          ctx.lineTo(80 + Math.cos(ang) * 44, 55 + Math.sin(ang) * 44);
+          ctx.stroke();
+        }
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 1;
+      }
+
+      // Ground (brighter during day)
+      const gBase = dayBlend > 0.5 ? "#1E5C14" : "#132A0C";
+      const gTop  = dayBlend > 0.5 ? "#2E8020" : "#1E4A12";
+      const gDet  = dayBlend > 0.5 ? "#3A9E28" : "#295E18";
+      ctx.fillStyle = gBase;
       ctx.fillRect(0, GROUND_Y, GW, GH - GROUND_Y);
-      ctx.fillStyle = "#1E4A12";
+      ctx.fillStyle = gTop;
       ctx.fillRect(0, GROUND_Y, GW, 10);
-      ctx.fillStyle = "#295E18";
+      ctx.fillStyle = gDet;
       for (let i = 3; i < GW; i += 19) {
         const h = 4 + (i % 7);
         ctx.fillRect(i, GROUND_Y - h + 5, 2, h);
@@ -174,65 +233,101 @@ export default function WildCatch() {
       const ox = shake > 0 ? (Math.random() - 0.5) * 5 : 0;
       const x = px + ox;
       const by = GROUND_Y - PLAYER_H;
+      const theme = getCharTheme(s.charLvl);
 
+      // Level-up aura glow
+      if (s.levelUpTimer > 0) {
+        const auraA = Math.min(1, s.levelUpTimer / 40);
+        const aCol = theme.accent || "#FFD700";
+        const hex = Math.round(auraA * 200).toString(16).padStart(2, "0");
+        ctx.shadowColor = aCol; ctx.shadowBlur = 26;
+        ctx.strokeStyle = aCol + hex; ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(x, by + PLAYER_H / 2 + 2, 26, PLAYER_H / 2 + 8, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0; ctx.lineWidth = 1;
+      }
+
+      // Shadow
       ctx.fillStyle = "rgba(0,0,0,0.2)";
       ctx.beginPath(); ctx.ellipse(x, GROUND_Y + 2, 17, 5, 0, 0, Math.PI * 2); ctx.fill();
 
-      // legs
-      ctx.fillStyle = "#1A237E";
+      // Legs
+      ctx.fillStyle = theme.legs;
       ctx.fillRect(x - 12, by + 33, 10, 17);
       ctx.fillRect(x + 2,  by + 33, 10, 17);
-      // shoes
+      // Shoes
       ctx.fillStyle = "#111";
       ctx.fillRect(x - 14, by + 46, 13, 6);
       ctx.fillRect(x + 1,  by + 46, 13, 6);
 
-      // body
-      ctx.fillStyle = "#3949AB";
+      // Body
+      ctx.fillStyle = theme.body;
       ctx.fillRect(x - 14, by + 17, 28, 18);
-      // collar
-      ctx.fillStyle = "#1A237E";
+      // Collar
+      ctx.fillStyle = theme.legs;
       ctx.fillRect(x - 6, by + 17, 12, 6);
 
-      // head
-      ctx.fillStyle = "#FFCC80";
+      // ── Left arm (free) ──
+      ctx.fillStyle = theme.body;
+      ctx.fillRect(x - 22, by + 18, 9, 5);   // upper arm
+      ctx.fillRect(x - 25, by + 23, 7, 5);   // forearm
+      ctx.fillStyle = theme.skin;
+      ctx.fillRect(x - 26, by + 28, 9, 6);   // fist/hand
+
+      // ── Right arm (holding ball) ──
+      ctx.fillStyle = theme.body;
+      ctx.fillRect(x + 13, by + 18, 9, 5);   // upper arm
+      ctx.fillRect(x + 18, by + 23, 7, 5);   // forearm
+      ctx.fillStyle = theme.skin;
+      ctx.fillRect(x + 17, by + 28, 9, 6);   // fist/hand
+
+      // Head
+      ctx.fillStyle = theme.skin;
       ctx.beginPath(); ctx.arc(x, by + 10, 14, 0, Math.PI * 2); ctx.fill();
 
-      // hat brim
-      ctx.fillStyle = "#0D47A1";
+      // Hat brim
+      ctx.fillStyle = theme.hat;
       ctx.fillRect(x - 18, by + 2, 36, 8);
-      // hat top
+      // Hat top
       ctx.fillRect(x - 12, by - 11, 24, 14);
 
-      // eyes
+      // Lv50 gold star on hat
+      if (s.charLvl >= 50) {
+        ctx.fillStyle = "#FFD700";
+        ctx.font = "10px serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText("★", x, by - 4);
+      }
+
+      // Eyes
       ctx.fillStyle = "#1A1A2E";
       ctx.beginPath();
       ctx.arc(x - 4, by + 9, 2.5, 0, Math.PI * 2);
       ctx.arc(x + 4, by + 9, 2.5, 0, Math.PI * 2);
       ctx.fill();
-      // pupils shine
+      // Eye shine
       ctx.fillStyle = "white";
       ctx.beginPath();
       ctx.arc(x - 3, by + 8, 1, 0, Math.PI * 2);
       ctx.arc(x + 5, by + 8, 1, 0, Math.PI * 2);
       ctx.fill();
 
-      // ball in hand
+      // Ball in right hand
       const bc = BALL_COLORS[s.ballLvl - 1];
       ctx.fillStyle = bc;
-      ctx.beginPath(); ctx.arc(x + 18, by + 28, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 22, by + 30, 9, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(x + 9, by + 28); ctx.lineTo(x + 27, by + 28);
+      ctx.moveTo(x + 13, by + 30); ctx.lineTo(x + 31, by + 30);
       ctx.stroke(); ctx.lineWidth = 1;
       ctx.fillStyle = "rgba(255,255,255,0.35)";
-      ctx.beginPath(); ctx.arc(x + 15, by + 24, 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 19, by + 26, 3.5, 0, Math.PI * 2); ctx.fill();
     }
 
     // ── draw flying ball ──
     function drawBall(bx, by) {
       const c = BALL_COLORS[s.ballLvl - 1];
-      // trail
       for (let i = 1; i <= 5; i++) {
         ctx.globalAlpha = (0.15 * i) / 5;
         ctx.fillStyle = c;
@@ -252,7 +347,6 @@ export default function WildCatch() {
       ctx.moveTo(bx - BALL_R, by); ctx.lineTo(bx + BALL_R, by);
       ctx.stroke(); ctx.lineWidth = 1;
 
-      // glow
       const gl = ctx.createRadialGradient(bx, by, 0, bx, by, BALL_R * 2.8);
       gl.addColorStop(0, c + "55"); gl.addColorStop(1, "transparent");
       ctx.fillStyle = gl;
@@ -270,7 +364,6 @@ export default function WildCatch() {
         ctx.fillStyle = `rgba(255,220,50,${pulse})`;
         ctx.beginPath(); ctx.arc(mx, my, MON_R + 14, 0, Math.PI * 2); ctx.fill();
       } else {
-        // rarity glow
         ctx.shadowColor = rc; ctx.shadowBlur = 8 + mon.level;
       }
 
@@ -282,7 +375,7 @@ export default function WildCatch() {
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(mon.emoji, mx, my);
 
-      // level badge
+      // Level badge
       const badgeX = mx + MON_R - 1, badgeY = my - MON_R + 1;
       ctx.fillStyle = rc;
       ctx.beginPath(); ctx.arc(badgeX, badgeY, 13, 0, Math.PI * 2); ctx.fill();
@@ -293,14 +386,14 @@ export default function WildCatch() {
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(mon.level, badgeX, badgeY);
 
-      // name tag
-      ctx.font = "9px monospace";
-      const nw = ctx.measureText(mon.name).width + 10;
-      ctx.fillStyle = "rgba(0,0,0,0.6)";
-      ctx.fillRect(mx - nw / 2, my + MON_R + 5, nw, 16);
+      // Name tag (Korean, larger font)
+      ctx.font = "bold 13px 'Noto Sans KR', sans-serif";
+      const nw = ctx.measureText(mon.name).width + 14;
+      ctx.fillStyle = "rgba(0,0,0,0.65)";
+      ctx.fillRect(mx - nw / 2, my + MON_R + 5, nw, 22);
       ctx.fillStyle = "#E8F5E9";
       ctx.textBaseline = "top";
-      ctx.fillText(mon.name, mx, my + MON_R + 8);
+      ctx.fillText(mon.name, mx, my + MON_R + 7);
     }
 
     // ── catch orbit animation ──
@@ -339,6 +432,23 @@ export default function WildCatch() {
       }
     }
 
+    function spawnLevelUpEffect(x, y) {
+      const cols = ["#FFD700","#FF80AB","#80D8FF","#CCFF90","#FFD740","#FFFFFF","#FF6E40"];
+      for (let i = 0; i < 50; i++) {
+        const a = (i / 50) * Math.PI * 2;
+        const sp = 2.5 + Math.random() * 6;
+        s.particles.push({
+          x, y,
+          vx: Math.cos(a) * sp,
+          vy: Math.sin(a) * sp - 2.5,
+          r: 3 + Math.random() * 5,
+          color: cols[Math.floor(Math.random() * cols.length)],
+          life: 55 + Math.random() * 35, maxLife: 90,
+        });
+      }
+      s.levelUpTimer = 180; // ~3 seconds of aura
+    }
+
     function drawParticles() {
       s.particles = s.particles.filter(p => p.life > 0);
       s.particles.forEach(p => {
@@ -354,6 +464,8 @@ export default function WildCatch() {
     function loop(t) {
       ctx.clearRect(0, 0, GW, GH);
       drawBg(t);
+
+      if (s.levelUpTimer > 0) s.levelUpTimer--;
 
       if (s.phase === "catching") {
         s.catchTimer += 16;
@@ -372,19 +484,33 @@ export default function WildCatch() {
             s.collection.push({ ...s.monster });
             s.totalCaught++;
             s.xp += s.monster.level;
-            const req = XP_REQ[s.ballLvl - 1];
-            if (s.ballLvl < 10 && req !== Infinity && s.xp >= req) {
-              s.xp -= req;
-              s.ballLvl = Math.min(10, s.ballLvl + 1);
-              showMsg(`✨ BALL Lv.${s.ballLvl}! ${BALL_NAMES[s.ballLvl-1]}!`, true);
+
+            // Character level up check (every 10 catches, max level 50)
+            const newCharLvl = Math.min(50, Math.floor(s.totalCaught / 10) + 1);
+            if (newCharLvl > s.charLvl) {
+              s.charLvl = newCharLvl;
+              spawnLevelUpEffect(s.player.x, GROUND_Y - PLAYER_H);
+              // Still process ball XP silently
+              const req = XP_REQ[s.ballLvl - 1];
+              if (s.ballLvl < 10 && req !== Infinity && s.xp >= req) {
+                s.xp -= req;
+                s.ballLvl = Math.min(10, s.ballLvl + 1);
+              }
+              showMsg(`🎊 캐릭터 Lv.${s.charLvl} 달성!`, true);
             } else {
-              showMsg(`🎉 ${s.monster.name} caught!`, true);
+              const req = XP_REQ[s.ballLvl - 1];
+              if (s.ballLvl < 10 && req !== Infinity && s.xp >= req) {
+                s.xp -= req;
+                s.ballLvl = Math.min(10, s.ballLvl + 1);
+                showMsg(`✨ 볼 Lv.${s.ballLvl}! ${BALL_NAMES[s.ballLvl-1]}!`, true);
+              } else {
+                showMsg(`🎉 ${s.monster.name} 포획!`, true);
+              }
             }
           } else {
             spawnParticles(s.monster.x, s.monster.y, false);
             s.shake = 20;
-            showMsg(`💨 ${s.monster.name} escaped!`, false);
-            // Escape: launch monster off-screen
+            showMsg(`💨 ${s.monster.name} 도망갔다!`, false);
             const dir = s.monster.x < GW / 2 ? -1 : 1;
             s.monster.vx = dir * 7;
             s.monster.vy = -4;
@@ -397,18 +523,15 @@ export default function WildCatch() {
           s.monster = spawnMonster(s.ballLvl);
         }
       } else if (s.phase === "escaping") {
-        // Player can still move while monster flees
         if (s.keys.has("ArrowLeft"))  s.player.x = Math.max(22, s.player.x - 5);
         if (s.keys.has("ArrowRight")) s.player.x = Math.min(GW - 22, s.player.x + 5);
 
-        // Monster flees off-screen
         s.monster.vx *= 1.09;
         s.monster.vy -= 0.3;
         s.monster.x  += s.monster.vx;
         s.monster.y  += s.monster.vy;
         s.escapeAlpha = Math.max(0, s.escapeAlpha - 0.018);
 
-        // Red dust trail
         if (Math.random() < 0.65) {
           s.particles.push({
             x: s.monster.x - s.monster.vx * 0.4,
@@ -435,16 +558,14 @@ export default function WildCatch() {
         }
 
       } else {
-        // player movement
         if (s.keys.has("ArrowLeft"))  s.player.x = Math.max(22, s.player.x - 5);
         if (s.keys.has("ArrowRight")) s.player.x = Math.min(GW - 22, s.player.x + 5);
 
-        // ball movement
         if (s.ball.active) {
           s.ball.y -= 9;
           if (s.ball.y < -20) {
             s.ball.active = false;
-            showMsg("Missed! Try again!", false);
+            showMsg("놓쳤다! 다시 도전!", false);
           }
           if (s.monster) {
             const dx = s.ball.x - s.monster.x;
@@ -456,7 +577,6 @@ export default function WildCatch() {
           }
         }
 
-        // monster movement
         if (s.monster) {
           s.monster.x += s.monster.vx;
           s.monster.y += s.monster.vy;
@@ -524,20 +644,20 @@ export default function WildCatch() {
 
   const xpPct = Math.min(100, (ui.xp / ui.xpReq) * 100);
   const bc = BALL_COLORS[ui.ballLvl - 1];
+  const charTheme = getCharTheme(ui.charLvl);
 
-  // rarity color for catch rate
   const pct = ui.catchPct;
   const pctColor = pct >= 80 ? "#69F0AE" : pct >= 50 ? "#FFD740" : pct >= 25 ? "#FF9800" : "#FF5252";
 
   return (
     <div style={{
-      fontFamily: "'Press Start 2P', monospace",
+      fontFamily: "'Press Start 2P', 'Noto Sans KR', monospace",
       background: "radial-gradient(ellipse at 50% 0%, #0D1E3D 0%, #040916 70%)",
       display: "flex", flexDirection: "column",
       alignItems: "center", padding: "10px 8px 14px", userSelect: "none",
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@700&family=Press+Start+2P&display=swap');
         @keyframes pop   { 0%{transform:scale(0.7);opacity:0} 30%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
         @keyframes glow  { 0%,100%{text-shadow:0 0 8px currentColor} 50%{text-shadow:0 0 20px currentColor,0 0 30px currentColor} }
         @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
@@ -549,8 +669,9 @@ export default function WildCatch() {
         color: "#FFD700", fontSize: 20, margin: "0 0 14px",
         textShadow: "3px 3px 0 #7A5C00, 0 0 24px #FFD70077",
         animation: "glow 3s ease infinite", letterSpacing: 2,
+        fontFamily: "'Noto Sans KR', 'Press Start 2P', monospace",
       }}>
-        🌟 WILD CATCH 🌟
+        🌟 준이 캐치 🌟
       </h1>
 
       {/* Stats panel */}
@@ -561,11 +682,13 @@ export default function WildCatch() {
         borderRadius: 10, padding: "8px 16px",
         boxShadow: `0 0 16px ${bc}22`,
       }}>
+        <StatBox label="캐릭터" value={`Lv.${ui.charLvl}`} sub={`/ 50`} color={charTheme.accent || "#78B7FF"} />
+        <div style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
         <StatBox label="BALL" value={`★ Lv.${ui.ballLvl}`} sub={ui.ballName} color={bc} />
         <div style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
-        <StatBox label="CAUGHT" value={ui.totalCaught} color="#FFD740" />
+        <StatBox label="포획수" value={ui.totalCaught} color="#FFD740" />
         <div style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
-        <StatBox label="CATCH RATE" value={`${pct}%`} color={pctColor} />
+        <StatBox label="확률" value={`${pct}%`} color={pctColor} />
       </div>
 
       {/* XP bar */}
@@ -601,6 +724,7 @@ export default function WildCatch() {
             fontSize: 10, animation: "pop 0.25s ease",
             textShadow: `0 0 12px ${ui.msgOk ? "#69F0AE" : "#FF5252"}`,
             background: "rgba(0,0,0,0.5)", padding: "4px 12px", borderRadius: 6,
+            fontFamily: "'Noto Sans KR', monospace",
           }}>
             {ui.message}
           </div>
@@ -626,7 +750,7 @@ export default function WildCatch() {
             boxShadow: `0 0 20px ${bc}66`,
             background: `linear-gradient(135deg, ${bc}33, ${bc}55)`,
           }}>
-          ⚡ THROW!
+          ⚡ 던지기!
         </button>
         <button className="touch-btn"
           onPointerDown={() => startMove("R")} onPointerUp={stopMove} onPointerLeave={stopMove}
@@ -634,8 +758,8 @@ export default function WildCatch() {
       </div>
 
       {/* Keyboard hint */}
-      <div style={{ color: "#4A6080", fontSize: 7, marginTop: 6, textAlign: "center", lineHeight: 2.2 }}>
-        ← → MOVE  •  SPACE THROW  •  BALL LV UP = MORE MONSTERS!
+      <div style={{ color: "#4A6080", fontSize: 7, marginTop: 6, textAlign: "center", lineHeight: 2.2, fontFamily: "'Noto Sans KR', monospace" }}>
+        ← → 이동  •  SPACE 던지기  •  10마리 포획마다 캐릭터 레벨업!
       </div>
 
       {/* Collection */}
@@ -644,8 +768,9 @@ export default function WildCatch() {
           <div style={{
             color: "#FFD700", fontSize: 8, marginBottom: 8,
             textShadow: "0 0 8px #FFD70066",
+            fontFamily: "'Noto Sans KR', monospace",
           }}>
-            MY COLLECTION ({ui.collection.length})
+            내 컬렉션 ({ui.collection.length})
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
             {ui.collection.map((m, i) => {
