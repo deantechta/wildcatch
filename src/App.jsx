@@ -250,10 +250,10 @@ export default function WildCatch() {
   const [showRules, setShowRules] = useState(false);
 
   useEffect(() => {
-    if (gameOver) return;
+    if (gameOver || showRules) return;
     const id = setInterval(() => setPlayTime(t => t + 1), 1000);
     return () => clearInterval(id);
-  }, [gameOver]);
+  }, [gameOver, showRules]);
 
   function syncUi(msg, ok) {
     const s = gs.current;
