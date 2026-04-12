@@ -1322,7 +1322,7 @@ export default function WildCatch() {
           fontFamily: "'Noto Sans KR', monospace", letterSpacing: 1,
           WebkitTapHighlightColor: "transparent",
         }}>
-          📖 규칙 보기
+          📖 규칙 보기 (일시정지)
         </button>
       </div>
 
