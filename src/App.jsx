@@ -55,11 +55,15 @@ function catchRate(ballLvl, monLvl) {
   return Math.max(0.06, 0.88 - gap * 0.15);
 }
 
-function spawnMonster(ballLvl) {
+function spawnMonster(ballLvl, charLvl = 1) {
   const min = Math.max(1, ballLvl - 1);
   const max = Math.min(10, ballLvl + 2);
   const lvl = Math.floor(Math.random() * (max - min + 1)) + min;
-  const speed = 0.9 + lvl * 0.22;
+  const baseSpeed = 0.9 + lvl * 0.22;
+  // 캐릭터 레벨 5단계마다 12% 속도 증가, 최대 2배
+  const tier = Math.floor((charLvl - 1) / 5);
+  const speedMult = Math.min(2.0, 1.0 + tier * 0.12);
+  const speed = baseSpeed * speedMult;
   return {
     ...MONSTERS[lvl - 1],
     x: 70 + Math.random() * (GW - 140),
@@ -136,7 +140,7 @@ export default function WildCatch() {
     const ctx = canvas.getContext("2d");
     const s = gs.current;
 
-    s.monster = spawnMonster(1);
+    s.monster = spawnMonster(1, s.charLvl);
     s.stars = Array.from({ length: 60 }, () => ({
       x: Math.random() * GW,
       y: Math.random() * GROUND_Y * 0.78,
@@ -537,7 +541,7 @@ export default function WildCatch() {
           }
 
           s.phase = "playing";
-          s.monster = spawnMonster(s.ballLvl);
+          s.monster = spawnMonster(s.ballLvl, s.charLvl);
 
           // Math quiz every 5 catches
           if (s.totalCaught % 5 === 0) {
@@ -576,7 +580,7 @@ export default function WildCatch() {
         const offscreen = s.monster.x < -80 || s.monster.x > GW + 80 || s.monster.y < -80;
         if (offscreen || s.escapeAlpha <= 0) {
           s.phase = "playing";
-          s.monster = spawnMonster(s.ballLvl);
+          s.monster = spawnMonster(s.ballLvl, s.charLvl);
         }
 
       } else {
