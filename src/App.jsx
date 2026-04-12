@@ -8,16 +8,41 @@ const BALL_R = 11;
 const MON_R = 28;
 
 const MONSTERS = [
-  { level: 1,  emoji: "🐛", name: "꼬물이",  rarity: "common"   },
-  { level: 2,  emoji: "🐝", name: "꿀벌이",  rarity: "common"   },
-  { level: 3,  emoji: "🦊", name: "여우린",  rarity: "common"   },
-  { level: 4,  emoji: "🐰", name: "토실이",  rarity: "uncommon" },
-  { level: 5,  emoji: "🦝", name: "너구리",  rarity: "uncommon" },
-  { level: 6,  emoji: "🐯", name: "호랑이",  rarity: "rare"     },
-  { level: 7,  emoji: "🦄", name: "유니콘",  rarity: "rare"     },
-  { level: 8,  emoji: "🐲", name: "드래곤",  rarity: "epic"     },
-  { level: 9,  emoji: "⚡", name: "번개신",  rarity: "epic"     },
-  { level: 10, emoji: "🌟", name: "별이",    rarity: "legend"   },
+  // ── common (Lv 1-3) ──
+  { level: 1,  emoji: "🐛", name: "꼬물이",   rarity: "common"   },
+  { level: 1,  emoji: "🐌", name: "달팽달팽", rarity: "common"   },
+  { level: 1,  emoji: "🐞", name: "무당벌레", rarity: "common"   },
+  { level: 2,  emoji: "🐝", name: "꿀벌이",   rarity: "common"   },
+  { level: 2,  emoji: "🦋", name: "나비요",   rarity: "common"   },
+  { level: 2,  emoji: "🐸", name: "개굴이",   rarity: "common"   },
+  { level: 3,  emoji: "🦊", name: "여우린",   rarity: "common"   },
+  { level: 3,  emoji: "🐹", name: "햄찌",     rarity: "common"   },
+  { level: 3,  emoji: "🐧", name: "펭귄이",   rarity: "common"   },
+  // ── uncommon (Lv 4-5) ──
+  { level: 4,  emoji: "🐰", name: "토실이",   rarity: "uncommon" },
+  { level: 4,  emoji: "🦆", name: "꽥꽥이",   rarity: "uncommon" },
+  { level: 4,  emoji: "🐨", name: "코알라",   rarity: "uncommon" },
+  { level: 5,  emoji: "🦝", name: "너구리",   rarity: "uncommon" },
+  { level: 5,  emoji: "🦙", name: "알파카",   rarity: "uncommon" },
+  { level: 5,  emoji: "🦜", name: "앵무새",   rarity: "uncommon" },
+  // ── rare (Lv 6-7) ──
+  { level: 6,  emoji: "🐯", name: "호랑이",   rarity: "rare"     },
+  { level: 6,  emoji: "🦁", name: "사자왕",   rarity: "rare"     },
+  { level: 6,  emoji: "🐼", name: "팬더곰",   rarity: "rare"     },
+  { level: 7,  emoji: "🦄", name: "유니콘",   rarity: "rare"     },
+  { level: 7,  emoji: "🐉", name: "동양룡",   rarity: "rare"     },
+  { level: 7,  emoji: "🦋", name: "신비나비", rarity: "rare"     },
+  // ── epic (Lv 8-9) ──
+  { level: 8,  emoji: "🐲", name: "드래곤",   rarity: "epic"     },
+  { level: 8,  emoji: "🦅", name: "폭풍독수리", rarity: "epic"   },
+  { level: 8,  emoji: "🌊", name: "파도신",   rarity: "epic"     },
+  { level: 9,  emoji: "⚡", name: "번개신",   rarity: "epic"     },
+  { level: 9,  emoji: "🔥", name: "불꽃왕",   rarity: "epic"     },
+  { level: 9,  emoji: "🌀", name: "회오리",   rarity: "epic"     },
+  // ── legend (Lv 10) ──
+  { level: 10, emoji: "🌟", name: "별이",     rarity: "legend"   },
+  { level: 10, emoji: "🌈", name: "무지개신", rarity: "legend"   },
+  { level: 10, emoji: "🍀", name: "행운의신", rarity: "legend"   },
 ];
 
 const RARITY_COLOR = {
@@ -55,6 +80,16 @@ function catchRate(ballLvl, monLvl) {
   return Math.max(0.06, 0.88 - gap * 0.15);
 }
 
+// 캐릭터 레벨별 miss 허용 횟수 (Lv1-9:7, 10-19:6, 20-29:5, 30-39:4, 40-49:3, 50:1)
+function missLimit(charLvl) {
+  if (charLvl >= 50) return 1;
+  if (charLvl >= 40) return 3;
+  if (charLvl >= 30) return 4;
+  if (charLvl >= 20) return 5;
+  if (charLvl >= 10) return 6;
+  return 7;
+}
+
 // 누적 포획수 → 캐릭터 레벨 변환
 // 기본 10마리마다 레벨업, 10의 배수 레벨(10,20,30,40)은 20마리 필요
 function charLevelFromCatches(n) {
@@ -68,17 +103,19 @@ function charLevelFromCatches(n) {
   return level;
 }
 
-function spawnMonster(ballLvl, charLvl = 1) {
+function spawnMonster(ballLvl, charLvl = 1, special = false) {
   const min = Math.max(1, ballLvl - 1);
   const max = Math.min(10, ballLvl + 2);
-  const lvl = Math.floor(Math.random() * (max - min + 1)) + min;
+  const lvl = special ? 10 : Math.floor(Math.random() * (max - min + 1)) + min;
   const baseSpeed = 0.9 + lvl * 0.22;
-  // 캐릭터 레벨 5단계마다 12% 속도 증가, 최대 2배
   const tier = Math.floor((charLvl - 1) / 5);
   const speedMult = Math.min(2.0, 1.0 + tier * 0.12);
-  const speed = baseSpeed * speedMult;
+  const speed = baseSpeed * speedMult * (special ? 1.3 : 1);
+  const candidates = MONSTERS.filter(m => m.level === lvl);
+  const template = candidates[Math.floor(Math.random() * candidates.length)];
   return {
-    ...MONSTERS[lvl - 1],
+    ...template,
+    special,
     x: 70 + Math.random() * (GW - 140),
     y: 35 + Math.random() * (GROUND_Y * 0.50),
     vx: (Math.random() > 0.5 ? 1 : -1) * speed,
@@ -110,6 +147,12 @@ export default function WildCatch() {
     msgOk: true,
     item: null,   // { type, x, y, vx, vy, timer } — 300 frames ≈ 5s
     effect: null, // { type, timer }
+    combo: 0,
+    maxCombo: 0,
+    specialCaught: 0,
+    specialBanner: 0, // frames remaining for center banner
+    missStreak: 0,    // consecutive misses (포획/도망 실패)
+    gameOver: false,
   });
 
   const [ui, setUi] = useState({
@@ -117,10 +160,14 @@ export default function WildCatch() {
     totalCaught: 0, message: "", msgOk: true,
     collection: [], ballName: BALL_NAMES[0],
     catchPct: 88, charLvl: 1,
+    combo: 0, maxCombo: 0, specialCaught: 0,
+    missStreak: 0,
   });
 
+  const [gameOver, setGameOver] = useState(false);
   const [quiz, setQuiz] = useState(null); // null | { a, b, op, answer, choices, wrong }
   const [playTime, setPlayTime] = useState(0); // seconds since session start
+  const [showResult, setShowResult] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => setPlayTime(t => t + 1), 1000);
@@ -138,6 +185,7 @@ export default function WildCatch() {
       message: msg ?? "", msgOk: ok ?? true,
       collection: [...s.collection.slice(-30)],
       ballName: BALL_NAMES[s.ballLvl - 1],
+      combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught,
       catchPct: pct,
       charLvl: s.charLvl,
     });
@@ -152,7 +200,7 @@ export default function WildCatch() {
       const req = XP_REQ[s.ballLvl - 1] === Infinity ? 999 : XP_REQ[s.ballLvl - 1];
       const mon = s.monster;
       const pct = mon ? Math.round(catchRate(s.ballLvl, mon.level) * 100) : 0;
-      setUi(prev => ({ ...prev, message: "", xp: s.xp, xpReq: req, totalCaught: s.totalCaught, catchPct: pct, charLvl: s.charLvl }));
+      setUi(prev => ({ ...prev, message: "", xp: s.xp, xpReq: req, totalCaught: s.totalCaught, catchPct: pct, charLvl: s.charLvl, combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught }));
     }, 2200);
   }
 
@@ -502,18 +550,66 @@ export default function WildCatch() {
       c.closePath();
     }
 
+    // ── special banner ──
+    function drawSpecialBanner() {
+      if (s.specialBanner <= 0) return;
+      const alpha = Math.min(1, s.specialBanner / 30) * Math.min(1, s.specialBanner / 160);
+      const scale = 1 + 0.08 * Math.sin(Date.now() * 0.008);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      // dark overlay
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
+      ctx.fillRect(0, GH / 2 - 55, GW, 110);
+      // glow bg
+      const grd = ctx.createRadialGradient(GW/2, GH/2, 10, GW/2, GH/2, 200);
+      grd.addColorStop(0, "rgba(255,215,0,0.35)");
+      grd.addColorStop(1, "rgba(255,215,0,0)");
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, GH/2 - 55, GW, 110);
+      // text
+      ctx.translate(GW/2, GH/2);
+      ctx.scale(scale, scale);
+      ctx.shadowColor = "#FFD700"; ctx.shadowBlur = 30;
+      ctx.fillStyle = "#FFD700";
+      ctx.font = "bold 26px 'Noto Sans KR', monospace";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("✨ 특별 몬스터 포획! ✨", 0, -12);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.font = "13px 'Noto Sans KR', monospace";
+      ctx.fillText("대단해! 정말 대단해!", 0, 16);
+      ctx.restore();
+      s.specialBanner--;
+    }
+
     // ── draw monster ──
     function drawMonster(mon, t, catching) {
       const bob = catching ? 0 : Math.sin(t * 0.0023 + mon.x * 0.02) * 5;
       const mx = mon.x, my = mon.y + bob;
       const rc = RARITY_COLOR[mon.rarity];
 
+      // special monster: rainbow spinning ring
+      if (mon.special && !catching) {
+        const rings = 3;
+        for (let i = 0; i < rings; i++) {
+          const angle = t * 0.003 + (i / rings) * Math.PI * 2;
+          ctx.strokeStyle = `hsl(${(t * 0.5 + i * 120) % 360}, 100%, 65%)`;
+          ctx.lineWidth = 3;
+          ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 12;
+          ctx.beginPath();
+          ctx.arc(mx, my, MON_R + 10 + i * 6, angle, angle + Math.PI * 1.2);
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0; ctx.lineWidth = 1;
+      }
+
       if (catching) {
         const pulse = 0.25 + 0.2 * Math.sin(t * 0.009);
         ctx.fillStyle = `rgba(255,220,50,${pulse})`;
         ctx.beginPath(); ctx.arc(mx, my, MON_R + 14, 0, Math.PI * 2); ctx.fill();
       } else {
-        ctx.shadowColor = rc; ctx.shadowBlur = 8 + mon.level;
+        ctx.shadowColor = mon.special ? "#FFD700" : rc;
+        ctx.shadowBlur = mon.special ? 20 : 8 + mon.level;
       }
 
       ctx.fillStyle = "rgba(0,0,0,0.22)";
@@ -635,6 +731,13 @@ export default function WildCatch() {
 
       if (s.levelUpTimer > 0) s.levelUpTimer--;
 
+      if (s.gameOver) {
+        if (s.monster) drawMonster(s.monster, t, false);
+        drawParticles();
+        drawPlayer(s.player.x, 0);
+        s.raf = requestAnimationFrame(loop); return;
+      }
+
       if (s.phase === "quiz") {
         // Game frozen during quiz — draw static scene only
         if (s.monster) drawMonster(s.monster, t, false);
@@ -657,36 +760,57 @@ export default function WildCatch() {
 
           if (ok) {
             spawnParticles(s.monster.x, s.monster.y, true);
+            const wasSpecial = s.monster.special;
             s.collection.push({ ...s.monster });
             s.totalCaught++;
             s.xp += s.monster.level;
+
+            // combo & miss reset
+            s.combo++;
+            s.missStreak = 0;
+            if (s.combo > s.maxCombo) s.maxCombo = s.combo;
+
+            if (wasSpecial) {
+              s.specialCaught++;
+              s.specialBanner = 200;
+              spawnLevelUpEffect(s.monster.x, s.monster.y);
+            }
 
             // Character level up check
             const newCharLvl = charLevelFromCatches(s.totalCaught);
             if (newCharLvl > s.charLvl) {
               s.charLvl = newCharLvl;
               spawnLevelUpEffect(s.player.x, GROUND_Y - PLAYER_H);
-              // Still process ball XP silently
               const req = XP_REQ[s.ballLvl - 1];
               if (s.ballLvl < 10 && req !== Infinity && s.xp >= req) {
                 s.xp -= req;
                 s.ballLvl = Math.min(10, s.ballLvl + 1);
               }
-              showMsg(`🎊 캐릭터 Lv.${s.charLvl} 달성!`, true);
-            } else {
+              if (!wasSpecial) showMsg(`🎊 캐릭터 Lv.${s.charLvl} 달성!`, true);
+            } else if (!wasSpecial) {
               const req = XP_REQ[s.ballLvl - 1];
               if (s.ballLvl < 10 && req !== Infinity && s.xp >= req) {
                 s.xp -= req;
                 s.ballLvl = Math.min(10, s.ballLvl + 1);
                 showMsg(`✨ 볼 Lv.${s.ballLvl}! ${BALL_NAMES[s.ballLvl-1]}!`, true);
               } else {
-                showMsg(`🎉 ${s.monster.name} 포획!`, true);
+                const comboMsgs = ["", "", "👍 2콤보!", "🔥 3콤보!", "💥 4콤보!", "⭐ 5콤보! 굉장해!", "🌟 6콤보!", "🚀 7콤보! 천재!", "👑 8콤보!", "💎 9콤보!", "🏆 10콤보!! 전설!"];
+                const cm = s.combo >= 10 ? "🏆 " + s.combo + "콤보!! 전설!" : (comboMsgs[s.combo] || `🎉 ${s.monster.name} 포획!`);
+                showMsg(s.combo >= 2 ? cm : `🎉 ${s.monster.name} 포획!`, true);
               }
             }
           } else {
+            s.combo = 0;
+            s.missStreak++;
             spawnParticles(s.monster.x, s.monster.y, false);
             s.shake = 20;
-            showMsg(`💨 ${s.monster.name} 도망갔다!`, false);
+            const limit = missLimit(s.charLvl);
+            if (s.missStreak >= limit) {
+              s.gameOver = true;
+              setGameOver(true);
+              s.raf = requestAnimationFrame(loop); return;
+            }
+            showMsg(`💨 도망! (${s.missStreak}/${limit})`, false);
             const dir = s.monster.x < GW / 2 ? -1 : 1;
             s.monster.vx = dir * 7;
             s.monster.vy = -4;
@@ -695,8 +819,11 @@ export default function WildCatch() {
             s.raf = requestAnimationFrame(loop); return;
           }
 
+          // special monster every 10 catches
+          const isSpecialSpawn = s.totalCaught > 0 && s.totalCaught % 10 === 0;
           s.phase = "playing";
-          s.monster = spawnMonster(s.ballLvl, s.charLvl);
+          s.monster = spawnMonster(s.ballLvl, s.charLvl, isSpecialSpawn);
+          if (isSpecialSpawn) showMsg("🌟 특별 몬스터 등장!", true);
 
           // Item spawn — 35% chance, only if no item already on field
           if (!s.item && Math.random() < 0.35) {
@@ -772,7 +899,15 @@ export default function WildCatch() {
           s.ball.y -= 9;
           if (s.ball.y < -20) {
             s.ball.active = false;
-            showMsg("놓쳤다! 다시 도전!", false);
+            s.combo = 0;
+            s.missStreak++;
+            const limit = missLimit(s.charLvl);
+            if (s.missStreak >= limit) {
+              s.gameOver = true;
+              setGameOver(true);
+            } else {
+              showMsg(`놓쳤다! (${s.missStreak}/${limit})`, false);
+            }
           }
           // ball vs monster
           if (s.monster) {
@@ -836,6 +971,7 @@ export default function WildCatch() {
         if (s.item) drawItem(s.item);
         if (s.ball.active) drawBall(s.ball.x, s.ball.y);
         drawParticles();
+        drawSpecialBanner();
         drawEffectHud();
         if (s.shake > 0) s.shake--;
         drawPlayer(s.player.x, s.shake);
@@ -972,7 +1108,22 @@ export default function WildCatch() {
         <StatBox label="포획수" value={ui.totalCaught} color="#FFD740" />
         <div style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
         <StatBox label="확률" value={`${pct}%`} color={pctColor} />
+        <div style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
+        <StatBox label="콤보" value={`${ui.combo}콤보`} sub={`최고 ${ui.maxCombo}`} color="#FF80AB" />
+        <div style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
+        <StatBox label="특별" value={`🌟${ui.specialCaught}`} color="#FFD700" />
       </div>
+
+      {/* 오늘의 결과 버튼 */}
+      <button onClick={() => setShowResult(true)} style={{
+        marginBottom: 8, padding: "6px 18px",
+        background: "linear-gradient(135deg, #1A2744, #0D1E3D)",
+        border: "1px solid #FFD70066", borderRadius: 20,
+        color: "#FFD700", fontSize: 11, cursor: "pointer",
+        fontFamily: "'Noto Sans KR', monospace", letterSpacing: 1,
+      }}>
+        📊 오늘의 결과
+      </button>
 
       {/* XP bar */}
       <div style={{ width: Math.min(GW, 520), marginBottom: 6, maxWidth: "95vw" }}>
@@ -1024,6 +1175,30 @@ export default function WildCatch() {
         }} />
         {quiz && (
           <QuizModal quiz={quiz} onAnswer={handleQuizAnswer} />
+        )}
+        {showResult && (
+          <ResultModal
+            ui={ui} playTime={playTime}
+            onClose={() => setShowResult(false)}
+          />
+        )}
+        {gameOver && (
+          <GameOverModal ui={ui} playTime={playTime} onRestart={() => {
+            const s = gs.current;
+            // reset all game state
+            s.player = { x: GW / 2 };
+            s.ball = { x: 0, y: 0, active: false };
+            s.monster = spawnMonster(1, 1);
+            s.ballLvl = 1; s.xp = 0; s.charLvl = 1; s.levelUpTimer = 0;
+            s.phase = "playing"; s.catchTimer = 0;
+            s.totalCaught = 0; s.collection = []; s.particles = [];
+            s.shake = 0; s.escapeAlpha = 1;
+            s.item = null; s.effect = null;
+            s.combo = 0; s.maxCombo = 0; s.specialCaught = 0;
+            s.specialBanner = 0; s.missStreak = 0; s.gameOver = false;
+            setGameOver(false);
+            syncUi("새로운 모험 시작!", true);
+          }} />
         )}
       </div>
 
@@ -1091,6 +1266,115 @@ function StatBox({ label, value, sub, color }) {
       <div style={{ color: "#3A4A64", fontSize: 7, marginBottom: 3 }}>{label}</div>
       <div style={{ color, fontSize: 12, textShadow: `0 0 8px ${color}88` }}>{value}</div>
       {sub && <div style={{ color: "#445", fontSize: 7, marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function GameOverModal({ ui, playTime, onRestart }) {
+  const fmt = s => `${String(Math.floor(s/3600)).padStart(2,"0")}:${String(Math.floor((s%3600)/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+  return (
+    <div style={{
+      position: "absolute", inset: 0,
+      background: "rgba(4,0,0,0.92)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      borderRadius: 8, zIndex: 20,
+    }}>
+      <div style={{
+        background: "linear-gradient(135deg, #1A0000, #2D0A0A)",
+        border: "2px solid #FF525277", borderRadius: 16,
+        padding: "28px 28px 22px", textAlign: "center", width: 280,
+        boxShadow: "0 0 50px #FF525233",
+        fontFamily: "'Noto Sans KR', monospace",
+      }}>
+        <div style={{ fontSize: 36, marginBottom: 8 }}>💀</div>
+        <div style={{ color: "#FF5252", fontSize: 16, fontWeight: "bold", marginBottom: 4, letterSpacing: 2 }}>
+          GAME OVER
+        </div>
+        <div style={{ color: "#90A4AE", fontSize: 10, marginBottom: 20 }}>
+          7번 연속 실패... 다시 도전해봐!
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 18 }}>
+          {[
+            { label: "총 포획수",   value: `${ui.totalCaught}마리`, color: "#FFD740" },
+            { label: "최고 콤보",   value: `${ui.maxCombo}콤보`,   color: "#FF80AB" },
+            { label: "최고 레벨",   value: `Lv.${ui.charLvl}`,    color: "#78B7FF" },
+            { label: "플레이 시간", value: fmt(playTime),           color: "#90CAF9" },
+          ].map(r => (
+            <div key={r.label} style={{
+              display: "flex", justifyContent: "space-between",
+              background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "6px 14px",
+            }}>
+              <span style={{ color: "#90A4AE", fontSize: 11 }}>{r.label}</span>
+              <span style={{ color: r.color, fontSize: 13, fontWeight: "bold", fontFamily: "monospace" }}>{r.value}</span>
+            </div>
+          ))}
+        </div>
+        <button onClick={onRestart} style={{
+          width: "100%", padding: "11px 0",
+          background: "linear-gradient(135deg, #B71C1C, #C62828)",
+          border: "none", borderRadius: 8,
+          color: "white", fontSize: 12, cursor: "pointer",
+          fontFamily: "'Noto Sans KR', monospace", letterSpacing: 1,
+          boxShadow: "0 0 16px #FF525244",
+        }}>
+          다시 도전! 🔥
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ResultModal({ ui, playTime, onClose }) {
+  const fmt = s => `${String(Math.floor(s/3600)).padStart(2,"0")}:${String(Math.floor((s%3600)/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+  const stars = ui.totalCaught >= 30 ? 3 : ui.totalCaught >= 15 ? 2 : ui.totalCaught >= 5 ? 1 : 0;
+  const rows = [
+    { label: "총 포획수",      value: `${ui.totalCaught}마리`,       color: "#FFD740" },
+    { label: "최고 콤보",      value: `${ui.maxCombo}콤보`,          color: "#FF80AB" },
+    { label: "특별 몬스터",    value: `${ui.specialCaught}마리`,     color: "#FFD700" },
+    { label: "최고 레벨",      value: `Lv.${ui.charLvl}`,           color: "#78B7FF" },
+    { label: "플레이 시간",    value: fmt(playTime),                  color: "#90CAF9" },
+  ];
+  return (
+    <div style={{
+      position: "absolute", inset: 0,
+      background: "rgba(4,9,22,0.94)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      borderRadius: 8, zIndex: 20,
+    }}>
+      <div style={{
+        background: "linear-gradient(135deg, #0D1E3D, #1A2744)",
+        border: "2px solid #FFD70077", borderRadius: 16,
+        padding: "28px 28px 22px", textAlign: "center", width: 280,
+        boxShadow: "0 0 50px #FFD70033",
+        fontFamily: "'Noto Sans KR', monospace",
+      }}>
+        <div style={{ color: "#FFD700", fontSize: 13, marginBottom: 4, letterSpacing: 1 }}>
+          📊 오늘의 모험 결과
+        </div>
+        <div style={{ fontSize: 28, marginBottom: 12, letterSpacing: 4 }}>
+          {"⭐".repeat(stars)}{"☆".repeat(3 - stars)}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
+          {rows.map(r => (
+            <div key={r.label} style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              background: "rgba(255,255,255,0.05)", borderRadius: 8, padding: "7px 14px",
+            }}>
+              <span style={{ color: "#90A4AE", fontSize: 11 }}>{r.label}</span>
+              <span style={{ color: r.color, fontSize: 13, fontWeight: "bold", fontFamily: "monospace" }}>{r.value}</span>
+            </div>
+          ))}
+        </div>
+        <button onClick={onClose} style={{
+          width: "100%", padding: "11px 0",
+          background: "linear-gradient(135deg, #1A2744, #263554)",
+          border: "1px solid #FFD70055", borderRadius: 8,
+          color: "#FFD700", fontSize: 12, cursor: "pointer",
+          fontFamily: "'Noto Sans KR', monospace", letterSpacing: 1,
+        }}>
+          계속 모험! 🚀
+        </button>
+      </div>
     </div>
   );
 }
