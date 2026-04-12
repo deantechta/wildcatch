@@ -488,10 +488,22 @@ export default function WildCatch() {
     }
 
     function triggerQuiz() {
-      const a = Math.floor(Math.random() * 9) + 1;
-      const b = Math.floor(Math.random() * 9) + 1;
+      // 홀수번째 퀴즈: +, 짝수번째: -
+      const op = (s.totalCaught / 5) % 2 === 1 ? "+" : "-";
+      let a = Math.floor(Math.random() * 9) + 1;
+      let b = Math.floor(Math.random() * 9) + 1;
+      if (op === "-" && a < b) { const tmp = a; a = b; b = tmp; }
+      const answer = op === "+" ? a + b : a - b;
+      const maxVal = op === "+" ? 18 : 8;
+      const choiceSet = new Set([answer]);
+      while (choiceSet.size < 4) {
+        const offset = Math.floor(Math.random() * 4) + 1;
+        const c = answer + (Math.random() > 0.5 ? offset : -offset);
+        if (c !== answer && c >= 0 && c <= maxVal) choiceSet.add(c);
+      }
+      const choices = [...choiceSet].sort(() => Math.random() - 0.5);
       s.phase = "quiz";
-      setQuiz({ a, b, answer: a + b, wrong: false });
+      setQuiz({ a, b, op, answer, choices, wrong: false });
     }
 
     function spawnLevelUpEffect(x, y) {
@@ -904,12 +916,7 @@ function StatBox({ label, value, sub, color }) {
 }
 
 function QuizModal({ quiz, onAnswer }) {
-  const [input, setInput] = useState("");
-
-  const submit = () => {
-    const num = parseInt(input, 10);
-    if (!isNaN(num)) onAnswer(num);
-  };
+  const opColor = quiz.op === "+" ? "#64B5F6" : "#FF8A65";
 
   return (
     <div style={{
@@ -920,13 +927,13 @@ function QuizModal({ quiz, onAnswer }) {
     }}>
       <div style={{
         background: "linear-gradient(135deg, #0D1E3D, #1A2744)",
-        border: "2px solid #FFD70077",
+        border: `2px solid ${opColor}77`,
         borderRadius: 16, padding: "28px 32px",
-        textAlign: "center", width: 280,
-        boxShadow: "0 0 40px #FFD70044",
+        textAlign: "center", width: 260,
+        boxShadow: `0 0 40px ${opColor}44`,
         fontFamily: "'Noto Sans KR', monospace",
       }}>
-        <div style={{ fontSize: 11, color: "#FFD700", marginBottom: 6, letterSpacing: 1 }}>
+        <div style={{ fontSize: 11, color: opColor, marginBottom: 6, letterSpacing: 1 }}>
           🧮 퀴즈 타임!
         </div>
         <div style={{ fontSize: 10, color: "#90A4AE", marginBottom: 20 }}>
@@ -936,67 +943,32 @@ function QuizModal({ quiz, onAnswer }) {
         <div style={{
           fontSize: 38, color: "white", fontWeight: "bold",
           marginBottom: 20, letterSpacing: 4,
-          textShadow: "0 0 20px #FFD70088",
+          textShadow: `0 0 20px ${opColor}88`,
         }}>
-          {quiz.a} + {quiz.b} = ?
+          {quiz.a} <span style={{ color: opColor }}>{quiz.op}</span> {quiz.b} = ?
         </div>
-
-        <input
-          type="number"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && submit()}
-          autoFocus
-          style={{
-            width: "100%", padding: "10px 0",
-            fontSize: 28, textAlign: "center",
-            background: "rgba(255,255,255,0.08)",
-            border: quiz.wrong ? "2px solid #FF5252" : "2px solid #1E88E5",
-            borderRadius: 8, color: "white",
-            outline: "none", marginBottom: 12,
-            fontFamily: "monospace",
-            boxSizing: "border-box",
-          }}
-          placeholder="?"
-        />
 
         {quiz.wrong && (
           <div style={{
-            color: "#FF5252", fontSize: 11, marginBottom: 10,
+            color: "#FF5252", fontSize: 11, marginBottom: 12,
             animation: "pop 0.2s ease",
           }}>
             ❌ 틀렸어! 다시 해봐!
           </div>
         )}
 
-        <button
-          onClick={submit}
-          style={{
-            width: "100%", padding: "12px 0",
-            background: "linear-gradient(135deg, #1565C0, #1E88E5)",
-            border: "none", borderRadius: 8,
-            color: "white", fontSize: 14, fontWeight: "bold",
-            cursor: "pointer", letterSpacing: 1,
-            fontFamily: "'Noto Sans KR', monospace",
-            boxShadow: "0 0 16px #1E88E544",
-          }}
-        >
-          확인 ✓
-        </button>
-
-        {/* 숫자 패드 (모바일용) */}
-        <div style={{
-          display: "grid", gridTemplateColumns: "repeat(5, 1fr)",
-          gap: 6, marginTop: 14,
-        }}>
-          {Array.from({ length: 19 }, (_, i) => i).map(n => (
+        {/* 4지선다 */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {quiz.choices.map(n => (
             <button key={n} onClick={() => onAnswer(n)} style={{
-              padding: "8px 0", fontSize: 13, fontWeight: "bold",
-              background: n === quiz.answer && quiz.wrong
-                ? "rgba(105,240,174,0.15)" : "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.15)",
-              borderRadius: 6, color: "#CFD8DC", cursor: "pointer",
+              padding: "14px 0", fontSize: 22, fontWeight: "bold",
+              background: quiz.wrong && n === quiz.answer
+                ? "rgba(105,240,174,0.18)" : "rgba(255,255,255,0.07)",
+              border: quiz.wrong && n === quiz.answer
+                ? "2px solid #69F0AE" : "2px solid rgba(255,255,255,0.15)",
+              borderRadius: 10, color: "#E8EAF6", cursor: "pointer",
               fontFamily: "monospace",
+              transition: "background 0.15s",
             }}>
               {n}
             </button>
