@@ -229,7 +229,8 @@ export default function WildCatch() {
     specialBanner: 0,
     missStreak: 0,
     gameOver: false,
-    goldenBall: false, // 5콤보 보상: 다음 1발 확정 포획
+    goldenBall: false,
+    paused: false,
   });
 
   const [ui, setUi] = useState({
@@ -245,6 +246,7 @@ export default function WildCatch() {
   const [quiz, setQuiz] = useState(null); // null | { a, b, op, answer, choices, wrong }
   const [playTime, setPlayTime] = useState(0); // seconds since session start
   const [showResult, setShowResult] = useState(false);
+  const [showRules, setShowRules] = useState(false);
 
   useEffect(() => {
     if (gameOver) return;
@@ -824,6 +826,21 @@ export default function WildCatch() {
 
       if (s.levelUpTimer > 0) s.levelUpTimer--;
 
+      // 규칙 화면 — 게임 정지 (draw only)
+      if (s.paused) {
+        if (s.monster) drawMonster(s.monster, t, false);
+        drawParticles();
+        drawPlayer(s.player.x, 0);
+        // dim overlay
+        ctx.fillStyle = "rgba(4,9,22,0.55)";
+        ctx.fillRect(0, 0, GW, GH);
+        ctx.fillStyle = "#FFD700";
+        ctx.font = "bold 14px 'Noto Sans KR', monospace";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText("⏸ 일시정지", GW / 2, GH / 2);
+        s.raf = requestAnimationFrame(loop); return;
+      }
+
       if (s.gameOver) {
         if (s.monster) drawMonster(s.monster, t, false);
         drawParticles();
@@ -1199,9 +1216,9 @@ export default function WildCatch() {
         @keyframes pop   { 0%{transform:scale(0.7);opacity:0} 30%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
         @keyframes glow  { 0%,100%{text-shadow:0 0 8px currentColor} 50%{text-shadow:0 0 20px currentColor,0 0 30px currentColor} }
         @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
-        .touch-btn { -webkit-tap-highlight-color: transparent; }
+        .touch-btn { -webkit-tap-highlight-color: transparent; touch-action: none; }
         .touch-btn:active { transform:scale(0.91); filter:brightness(1.4); }
-        * { -webkit-touch-callout: none; }
+        * { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
       `}</style>
 
       {/* Title */}
@@ -1261,16 +1278,32 @@ export default function WildCatch() {
         <StatBox label="특별" value={`🌟${ui.specialCaught}`} color="#FFD700" />
       </div>
 
-      {/* 오늘의 결과 버튼 */}
-      <button onClick={() => setShowResult(true)} style={{
-        marginBottom: 8, padding: "6px 18px",
-        background: "linear-gradient(135deg, #1A2744, #0D1E3D)",
-        border: "1px solid #FFD70066", borderRadius: 20,
-        color: "#FFD700", fontSize: 11, cursor: "pointer",
-        fontFamily: "'Noto Sans KR', monospace", letterSpacing: 1,
-      }}>
-        📊 오늘의 결과
-      </button>
+      {/* 버튼 행 */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+        <button onClick={() => setShowResult(true)} style={{
+          padding: "6px 18px",
+          background: "linear-gradient(135deg, #1A2744, #0D1E3D)",
+          border: "1px solid #FFD70066", borderRadius: 20,
+          color: "#FFD700", fontSize: 11, cursor: "pointer",
+          fontFamily: "'Noto Sans KR', monospace", letterSpacing: 1,
+          WebkitTapHighlightColor: "transparent",
+        }}>
+          📊 오늘의 결과
+        </button>
+        <button onClick={() => {
+          gs.current.paused = true;
+          setShowRules(true);
+        }} style={{
+          padding: "6px 18px",
+          background: "linear-gradient(135deg, #1A2744, #0D1E3D)",
+          border: "1px solid #78B7FF66", borderRadius: 20,
+          color: "#78B7FF", fontSize: 11, cursor: "pointer",
+          fontFamily: "'Noto Sans KR', monospace", letterSpacing: 1,
+          WebkitTapHighlightColor: "transparent",
+        }}>
+          📖 규칙 보기
+        </button>
+      </div>
 
       {/* XP bar */}
       <div style={{ width: Math.min(GW, 520), marginBottom: 6, maxWidth: "95vw" }}>
@@ -1329,6 +1362,12 @@ export default function WildCatch() {
             onClose={() => setShowResult(false)}
           />
         )}
+        {showRules && (
+          <RulesModal onClose={() => {
+            gs.current.paused = false;
+            setShowRules(false);
+          }} />
+        )}
         {gameOver && (
           <GameOverModal ui={ui} playTime={playTime} onRestart={() => {
             const s = gs.current;
@@ -1351,15 +1390,18 @@ export default function WildCatch() {
       </div>
 
       {/* Touch controls */}
-      <div style={{ display: "flex", gap: 14, marginTop: 10, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 16, marginTop: 12, alignItems: "center" }}
+        onContextMenu={(e) => e.preventDefault()}>
         <button className="touch-btn"
           {...makeTouchMove("L")}
           onPointerDown={() => startMove("L")} onPointerUp={() => stopMove("L")} onPointerCancel={() => stopMove("L")}
+          onContextMenu={(e) => e.preventDefault()}
           style={btnStyle("#1565C0")}>◀</button>
         <button className="touch-btn"
           {...touchThrow}
           onPointerDown={doThrow}
-          style={{ ...btnStyle(ui.goldenBall ? "#FFD700" : bc), minWidth: 130, fontSize: 10,
+          onContextMenu={(e) => e.preventDefault()}
+          style={{ ...btnStyle(ui.goldenBall ? "#FFD700" : bc), minWidth: 150, fontSize: 10,
             boxShadow: ui.goldenBall ? "0 0 24px #FFD70099" : `0 0 20px ${bc}66`,
             background: ui.goldenBall
               ? "linear-gradient(135deg, #7A5C0088, #FFD70055)"
@@ -1371,6 +1413,7 @@ export default function WildCatch() {
         <button className="touch-btn"
           {...makeTouchMove("R")}
           onPointerDown={() => startMove("R")} onPointerUp={() => stopMove("R")} onPointerCancel={() => stopMove("R")}
+          onContextMenu={(e) => e.preventDefault()}
           style={btnStyle("#1565C0")}>▶</button>
       </div>
 
@@ -1420,6 +1463,129 @@ function StatBox({ label, value, sub, color }) {
       <div style={{ color: "#3A4A64", fontSize: 7, marginBottom: 3 }}>{label}</div>
       <div style={{ color, fontSize: 12, textShadow: `0 0 8px ${color}88` }}>{value}</div>
       {sub && <div style={{ color: "#445", fontSize: 7, marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function RulesModal({ onClose }) {
+  const sections = [
+    {
+      title: "🎮 기본 조작",
+      items: [
+        "← → (방향키 또는 ◀ ▶ 버튼) 으로 이동",
+        "Space 또는 ⚡던지기! 버튼으로 볼 발사",
+        "볼이 몬스터에 맞으면 포획 시도!",
+      ],
+    },
+    {
+      title: "⏰ 제한 시간",
+      items: [
+        "몬스터는 15초 안에 잡아야 함",
+        "5초 이하 남으면 화면 중앙에 카운트다운 표시",
+        "시간 초과 시 몬스터 도망 (게임오버 아님)",
+      ],
+    },
+    {
+      title: "💀 게임 오버",
+      items: [
+        "볼을 던졌는데 못 맞히면 MISS 카운트",
+        "Lv.1-9: 10번, Lv.10-19: 8번, Lv.20-29: 6번",
+        "Lv.30-39: 5번, Lv.40-49: 3번, Lv.50: 1번 실패 시 종료",
+        "몬스터 도망은 MISS 카운트 없음",
+      ],
+    },
+    {
+      title: "🔥 콤보 & 황금볼",
+      items: [
+        "연속 포획 성공마다 콤보 증가!",
+        "5콤보 달성 시 🌟황금볼 지급 (확정 포획)",
+        "실패하면 콤보 초기화",
+      ],
+    },
+    {
+      title: "🌟 특별 몬스터",
+      items: [
+        "10마리 포획마다 특별 몬스터 등장",
+        "무지개 링 + 중앙 배너 이펙트",
+        "포획 성공 시 캐릭터 레벨 +5 즉시!",
+        "포획률 30% — 황금볼 사용 추천!",
+      ],
+    },
+    {
+      title: "⚡ 아이템",
+      items: [
+        "포획 성공 후 35% 확률로 아이템 등장",
+        "⚡빠르게: 5초간 플레이어 이동속도 2배",
+        "🐌느리게: 5초간 몬스터 속도 35%로 감소",
+        "5초 안에 볼로 맞추지 않으면 도망!",
+      ],
+    },
+    {
+      title: "🧮 퀴즈",
+      items: [
+        "5마리 포획마다 덧셈/뺄셈 퀴즈 등장",
+        "4지선다 버튼 또는 키보드 입력",
+        "정답을 맞춰야 게임 계속!",
+      ],
+    },
+  ];
+
+  return (
+    <div style={{
+      position: "absolute", inset: 0,
+      background: "rgba(4,9,22,0.96)",
+      display: "flex", alignItems: "flex-start", justifyContent: "center",
+      borderRadius: 8, zIndex: 20, overflowY: "auto",
+      padding: "16px 0",
+    }}>
+      <div style={{
+        background: "linear-gradient(135deg, #0D1E3D, #1A2744)",
+        border: "2px solid #78B7FF55", borderRadius: 16,
+        padding: "22px 20px 18px", width: 288,
+        boxShadow: "0 0 40px #78B7FF22",
+        fontFamily: "'Noto Sans KR', monospace",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <span style={{ color: "#78B7FF", fontSize: 13, fontWeight: "bold", letterSpacing: 1 }}>
+            ⏸ 규칙 보기
+          </span>
+          <span style={{ color: "#556", fontSize: 10 }}>게임 일시정지 중</span>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {sections.map(sec => (
+            <div key={sec.title} style={{
+              background: "rgba(255,255,255,0.04)",
+              borderRadius: 10, padding: "10px 12px",
+              borderLeft: "3px solid #78B7FF44",
+            }}>
+              <div style={{ color: "#78B7FF", fontSize: 11, fontWeight: "bold", marginBottom: 6 }}>
+                {sec.title}
+              </div>
+              {sec.items.map((item, i) => (
+                <div key={i} style={{
+                  color: "#B0BEC5", fontSize: 10, lineHeight: 1.7,
+                  paddingLeft: 6,
+                }}>
+                  · {item}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        <button onClick={onClose} style={{
+          width: "100%", padding: "12px 0", marginTop: 14,
+          background: "linear-gradient(135deg, #0D3060, #1565C0)",
+          border: "none", borderRadius: 8,
+          color: "white", fontSize: 13, cursor: "pointer",
+          fontFamily: "'Noto Sans KR', monospace", letterSpacing: 1,
+          boxShadow: "0 0 16px #1565C044",
+          WebkitTapHighlightColor: "transparent",
+        }}>
+          ▶ 게임 계속하기
+        </button>
+      </div>
     </div>
   );
 }
@@ -1624,12 +1790,13 @@ function QuizModal({ quiz, onAnswer }) {
 function btnStyle(color) {
   return {
     background: `${color}22`, border: `2px solid ${color}`,
-    color: color, padding: "14px 16px", borderRadius: 8,
-    fontSize: 16, fontFamily: "'Press Start 2P', monospace",
-    cursor: "pointer", touchAction: "none", minWidth: 56,
+    color: color, padding: "20px 22px", borderRadius: 12,
+    fontSize: 20, fontFamily: "'Press Start 2P', monospace",
+    cursor: "pointer", touchAction: "none", minWidth: 70,
     boxShadow: `0 0 10px ${color}44`, transition: "all 0.08s",
     userSelect: "none", WebkitUserSelect: "none",
     WebkitTapHighlightColor: "transparent",
+    WebkitTouchCallout: "none",
     outline: "none",
   };
 }
