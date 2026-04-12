@@ -55,6 +55,19 @@ function catchRate(ballLvl, monLvl) {
   return Math.max(0.06, 0.88 - gap * 0.15);
 }
 
+// 누적 포획수 → 캐릭터 레벨 변환
+// 기본 10마리마다 레벨업, 10의 배수 레벨(10,20,30,40)은 20마리 필요
+function charLevelFromCatches(n) {
+  let level = 1, used = 0;
+  while (level < 50) {
+    const cost = (level % 10 === 0) ? 20 : 10;
+    if (used + cost > n) break;
+    used += cost;
+    level++;
+  }
+  return level;
+}
+
 function spawnMonster(ballLvl, charLvl = 1) {
   const min = Math.max(1, ballLvl - 1);
   const max = Math.min(10, ballLvl + 2);
@@ -648,8 +661,8 @@ export default function WildCatch() {
             s.totalCaught++;
             s.xp += s.monster.level;
 
-            // Character level up check (every 10 catches, max level 50)
-            const newCharLvl = Math.min(50, Math.floor(s.totalCaught / 10) + 1);
+            // Character level up check
+            const newCharLvl = charLevelFromCatches(s.totalCaught);
             if (newCharLvl > s.charLvl) {
               s.charLvl = newCharLvl;
               spawnLevelUpEffect(s.player.x, GROUND_Y - PLAYER_H);
