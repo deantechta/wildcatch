@@ -292,18 +292,67 @@ export default function WildCatch() {
       ctx.fillStyle = theme.skin;
       ctx.beginPath(); ctx.arc(x, by + 10, 14, 0, Math.PI * 2); ctx.fill();
 
-      // Hat brim
+      // Hat — 10레벨 구간마다 모양 변경
+      const hatTier = Math.min(4, Math.floor((s.charLvl - 1) / 10));
       ctx.fillStyle = theme.hat;
-      ctx.fillRect(x - 18, by + 2, 36, 8);
-      // Hat top
-      ctx.fillRect(x - 12, by - 11, 24, 14);
 
-      // Lv50 gold star on hat
-      if (s.charLvl >= 50) {
-        ctx.fillStyle = "#FFD700";
-        ctx.font = "10px serif";
+      if (hatTier === 0) {
+        // Lv 1-10: 기본 캡
+        ctx.fillRect(x - 18, by + 2, 36, 8);
+        ctx.fillRect(x - 12, by - 11, 24, 14);
+
+      } else if (hatTier === 1) {
+        // Lv 11-20: 탐험가 모자 (넓은 챙 + 컬러 밴드)
+        ctx.fillRect(x - 22, by + 2, 44, 6);
+        ctx.fillRect(x - 12, by - 14, 24, 17);
+        ctx.fillStyle = theme.accent || "#FFD700";
+        ctx.fillRect(x - 12, by, 24, 4);
+
+      } else if (hatTier === 2) {
+        // Lv 21-30: 마법사 고깔모자
+        ctx.fillRect(x - 20, by + 2, 40, 6);
+        ctx.beginPath();
+        ctx.moveTo(x, by - 26);
+        ctx.lineTo(x - 13, by + 2);
+        ctx.lineTo(x + 13, by + 2);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = theme.accent || "#C084FC";
+        ctx.font = "9px serif";
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText("★", x, by - 4);
+        ctx.fillText("✦", x, by - 18);
+
+      } else if (hatTier === 3) {
+        // Lv 31-40: 3포인트 왕관
+        ctx.fillRect(x - 16, by + 1, 32, 9);
+        [[x - 16, x - 11, x - 6], [x - 4, x, x + 4], [x + 6, x + 11, x + 16]].forEach(([l, c, r], i) => {
+          const tipY = i === 1 ? by - 20 : by - 15;
+          ctx.beginPath(); ctx.moveTo(l, by + 1); ctx.lineTo(c, tipY); ctx.lineTo(r, by + 1); ctx.closePath(); ctx.fill();
+        });
+        ctx.fillStyle = theme.accent || "#FFCA28";
+        [[x - 11, by - 8], [x, by - 10], [x + 11, by - 8]].forEach(([gx, gy]) => {
+          ctx.beginPath(); ctx.arc(gx, gy, 2.5, 0, Math.PI * 2); ctx.fill();
+        });
+
+      } else {
+        // Lv 41-50: 에픽 5포인트 황금 왕관
+        ctx.fillRect(x - 18, by + 2, 36, 9);
+        [[x - 18, x - 13, x - 8, by - 16],
+         [x - 9,  x - 5,  x - 1, by - 12],
+         [x - 4,  x,      x + 4, by - 24],
+         [x + 1,  x + 5,  x + 9, by - 12],
+         [x + 8,  x + 13, x + 18, by - 16]].forEach(([l, c, r, tipY]) => {
+          ctx.beginPath(); ctx.moveTo(l, by + 2); ctx.lineTo(c, tipY); ctx.lineTo(r, by + 2); ctx.closePath(); ctx.fill();
+        });
+        ctx.fillStyle = theme.accent || "#CE93D8";
+        [x - 13, x, x + 13].forEach(gx => {
+          ctx.beginPath(); ctx.arc(gx, by + 7, 3, 0, Math.PI * 2); ctx.fill();
+        });
+        if (s.charLvl >= 50) {
+          ctx.fillStyle = "#FFD700";
+          ctx.font = "9px serif";
+          ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          ctx.fillText("★", x, by - 22);
+        }
       }
 
       // Eyes
