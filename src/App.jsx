@@ -60,7 +60,7 @@ function catchRate(ballLvl, monLvl) {
 function charLevelFromCatches(n) {
   let level = 1, used = 0;
   while (level < 50) {
-    const cost = (level % 10 === 0) ? 20 : 10;
+    const cost = (level % 10 === 0) ? 10 : 5;
     if (used + cost > n) break;
     used += cost;
     level++;
