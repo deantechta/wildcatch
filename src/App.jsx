@@ -155,14 +155,14 @@ function catchRate(ballLvl, monLvl) {
   return Math.max(0.06, 0.88 - gap * 0.15);
 }
 
-// 캐릭터 레벨별 miss 허용 횟수 (Lv1-9:7, 10-19:6, 20-29:5, 30-39:4, 40-49:3, 50:1)
+// 캐릭터 레벨별 miss 허용 횟수 (Lv1-9:10, 10-19:8, 20-29:6, 30-39:5, 40-49:3, 50:1)
 function missLimit(charLvl) {
   if (charLvl >= 50) return 1;
   if (charLvl >= 40) return 3;
-  if (charLvl >= 30) return 4;
-  if (charLvl >= 20) return 5;
-  if (charLvl >= 10) return 6;
-  return 7;
+  if (charLvl >= 30) return 5;
+  if (charLvl >= 20) return 6;
+  if (charLvl >= 10) return 8;
+  return 10;
 }
 
 // 누적 포획수 → 캐릭터 레벨 변환
@@ -247,9 +247,10 @@ export default function WildCatch() {
   const [showResult, setShowResult] = useState(false);
 
   useEffect(() => {
+    if (gameOver) return;
     const id = setInterval(() => setPlayTime(t => t + 1), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [gameOver]);
 
   function syncUi(msg, ok) {
     const s = gs.current;
@@ -846,7 +847,7 @@ export default function WildCatch() {
         drawPlayer(s.player.x, 0);
 
         if (s.catchTimer >= 1500) {
-          const rate = s.monster.special ? 0.08 : catchRate(s.ballLvl, s.monster.level);
+          const rate = s.monster.special ? 0.30 : catchRate(s.ballLvl, s.monster.level);
           const ok = s.ball.golden || Math.random() < rate;
           s.ball.active = false;
 
@@ -870,8 +871,8 @@ export default function WildCatch() {
               s.specialCaught++;
               s.specialBanner = 200;
               spawnLevelUpEffect(s.monster.x, s.monster.y);
-              // 특별 몬스터 포획: 캐릭터 레벨 +3 보너스
-              s.charLvl = Math.min(50, s.charLvl + 3);
+              // 특별 몬스터 포획: 캐릭터 레벨 +5 보너스
+              s.charLvl = Math.min(50, s.charLvl + 5);
               spawnLevelUpEffect(s.player.x, GROUND_Y - PLAYER_H);
             }
 
@@ -1130,17 +1131,25 @@ export default function WildCatch() {
 
   // touch controls
   const holdRef = useRef(null);
-  const stopMove = () => cancelAnimationFrame(holdRef.current);
+  const activeKeys = useRef(new Set()); // 현재 눌린 방향키 추적
+
+  const stopMove = (dir) => {
+    activeKeys.current.delete(dir);
+    if (activeKeys.current.size === 0) cancelAnimationFrame(holdRef.current);
+  };
+
   const startMove = (dir) => {
+    activeKeys.current.add(dir);
+    cancelAnimationFrame(holdRef.current);
     const step = () => {
       const s = gs.current;
-      s.player.x = dir === "L"
-        ? Math.max(22, s.player.x - 6)
-        : Math.min(GW - 22, s.player.x + 6);
-      holdRef.current = requestAnimationFrame(step);
+      if (activeKeys.current.has("L")) s.player.x = Math.max(22, s.player.x - 6);
+      if (activeKeys.current.has("R")) s.player.x = Math.min(GW - 22, s.player.x + 6);
+      if (activeKeys.current.size > 0) holdRef.current = requestAnimationFrame(step);
     };
     holdRef.current = requestAnimationFrame(step);
   };
+
   const doThrow = () => {
     const s = gs.current;
     if (!s.ball.active && s.phase === "playing") {
@@ -1148,6 +1157,17 @@ export default function WildCatch() {
       if (golden) s.goldenBall = false;
       s.ball = { x: s.player.x, y: GROUND_Y - PLAYER_H + 8, active: true, golden };
     }
+  };
+
+  // 터치 이벤트 핸들러 (preventDefault로 스크롤/줌 방지)
+  const makeTouchMove = (dir) => ({
+    onTouchStart: (e) => { e.preventDefault(); startMove(dir); },
+    onTouchEnd:   (e) => { e.preventDefault(); stopMove(dir); },
+    onTouchCancel:(e) => { e.preventDefault(); stopMove(dir); },
+  });
+  const touchThrow = {
+    onTouchStart: (e) => { e.preventDefault(); doThrow(); },
+    onTouchEnd:   (e) => { e.preventDefault(); },
   };
 
   function handleQuizAnswer(num) {
@@ -1179,7 +1199,9 @@ export default function WildCatch() {
         @keyframes pop   { 0%{transform:scale(0.7);opacity:0} 30%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
         @keyframes glow  { 0%,100%{text-shadow:0 0 8px currentColor} 50%{text-shadow:0 0 20px currentColor,0 0 30px currentColor} }
         @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
-        .touch-btn:active { transform:scale(0.93); filter:brightness(1.3); }
+        .touch-btn { -webkit-tap-highlight-color: transparent; }
+        .touch-btn:active { transform:scale(0.91); filter:brightness(1.4); }
+        * { -webkit-touch-callout: none; }
       `}</style>
 
       {/* Title */}
@@ -1331,10 +1353,12 @@ export default function WildCatch() {
       {/* Touch controls */}
       <div style={{ display: "flex", gap: 14, marginTop: 10, alignItems: "center" }}>
         <button className="touch-btn"
-          onPointerDown={() => startMove("L")} onPointerUp={stopMove} onPointerLeave={stopMove}
+          {...makeTouchMove("L")}
+          onPointerDown={() => startMove("L")} onPointerUp={() => stopMove("L")} onPointerCancel={() => stopMove("L")}
           style={btnStyle("#1565C0")}>◀</button>
         <button className="touch-btn"
-          onPointerDown={doThrow} onPointerUp={() => {}}
+          {...touchThrow}
+          onPointerDown={doThrow}
           style={{ ...btnStyle(ui.goldenBall ? "#FFD700" : bc), minWidth: 130, fontSize: 10,
             boxShadow: ui.goldenBall ? "0 0 24px #FFD70099" : `0 0 20px ${bc}66`,
             background: ui.goldenBall
@@ -1345,7 +1369,8 @@ export default function WildCatch() {
           {ui.goldenBall ? "🌟 황금볼!" : "⚡ 던지기!"}
         </button>
         <button className="touch-btn"
-          onPointerDown={() => startMove("R")} onPointerUp={stopMove} onPointerLeave={stopMove}
+          {...makeTouchMove("R")}
+          onPointerDown={() => startMove("R")} onPointerUp={() => stopMove("R")} onPointerCancel={() => stopMove("R")}
           style={btnStyle("#1565C0")}>▶</button>
       </div>
 
@@ -1599,9 +1624,12 @@ function QuizModal({ quiz, onAnswer }) {
 function btnStyle(color) {
   return {
     background: `${color}22`, border: `2px solid ${color}`,
-    color: color, padding: "12px 16px", borderRadius: 8,
+    color: color, padding: "14px 16px", borderRadius: 8,
     fontSize: 16, fontFamily: "'Press Start 2P', monospace",
-    cursor: "pointer", touchAction: "none", minWidth: 52,
-    boxShadow: `0 0 10px ${color}44`, transition: "all 0.1s",
+    cursor: "pointer", touchAction: "none", minWidth: 56,
+    boxShadow: `0 0 10px ${color}44`, transition: "all 0.08s",
+    userSelect: "none", WebkitUserSelect: "none",
+    WebkitTapHighlightColor: "transparent",
+    outline: "none",
   };
 }
