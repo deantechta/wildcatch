@@ -801,16 +801,9 @@ export default function WildCatch() {
             }
           } else {
             s.combo = 0;
-            s.missStreak++;
             spawnParticles(s.monster.x, s.monster.y, false);
             s.shake = 20;
-            const limit = missLimit(s.charLvl);
-            if (s.missStreak >= limit) {
-              s.gameOver = true;
-              setGameOver(true);
-              s.raf = requestAnimationFrame(loop); return;
-            }
-            showMsg(`💨 도망! (${s.missStreak}/${limit})`, false);
+            showMsg(`💨 ${s.monster.name} 도망갔다!`, false);
             const dir = s.monster.x < GW / 2 ? -1 : 1;
             s.monster.vx = dir * 7;
             s.monster.vy = -4;
