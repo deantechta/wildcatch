@@ -95,6 +95,8 @@ export default function WildCatch() {
     msgTimer: 0,
     msgText: "",
     msgOk: true,
+    item: null,   // { type, x, y, vx, vy, timer } — 300 frames ≈ 5s
+    effect: null, // { type, timer }
   });
 
   const [ui, setUi] = useState({
@@ -414,6 +416,79 @@ export default function WildCatch() {
       ctx.beginPath(); ctx.arc(bx, by, BALL_R * 2.8, 0, Math.PI * 2); ctx.fill();
     }
 
+    // ── draw item ──
+    function drawItem(item) {
+      const { x, y, type, timer } = item;
+      const ratio = timer / 300;
+      const isSpeed = type === "speed";
+      const color = isSpeed ? "#FFD700" : "#00BCD4";
+      const icon  = isSpeed ? "⚡" : "🐌";
+      const label = isSpeed ? "빠르게!" : "느리게!";
+
+      // countdown arc
+      ctx.shadowColor = color; ctx.shadowBlur = 16;
+      ctx.strokeStyle = color; ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(x, y, 22, -Math.PI / 2, -Math.PI / 2 + ratio * Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur = 0; ctx.lineWidth = 1;
+
+      // background circle
+      ctx.fillStyle = isSpeed ? "rgba(255,215,0,0.18)" : "rgba(0,188,212,0.18)";
+      ctx.beginPath(); ctx.arc(x, y, 18, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = color + "BB"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x, y, 18, 0, Math.PI * 2); ctx.stroke();
+      ctx.lineWidth = 1;
+
+      // icon
+      ctx.font = "15px serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(icon, x, y);
+
+      // label + seconds
+      ctx.fillStyle = color;
+      ctx.font = "bold 7px 'Noto Sans KR', monospace";
+      ctx.fillText(label, x, y + 30);
+      ctx.fillStyle = "rgba(255,255,255,0.8)";
+      ctx.font = "bold 8px monospace";
+      ctx.fillText(Math.ceil(timer / 60) + "s", x, y - 28);
+    }
+
+    // ── draw active effect HUD ──
+    function drawEffectHud() {
+      if (!s.effect) return;
+      const isSpeed = s.effect.type === "speed";
+      const color = isSpeed ? "#FFD700" : "#00BCD4";
+      const icon  = isSpeed ? "⚡" : "🐌";
+      const label = isSpeed ? "빠르게" : "느리게";
+      const secs  = Math.ceil(s.effect.timer / 60);
+
+      ctx.fillStyle = isSpeed ? "rgba(255,215,0,0.15)" : "rgba(0,188,212,0.15)";
+      ctx.strokeStyle = color + "99";
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, GW - 76, 6, 68, 22, 6);
+      ctx.fill(); ctx.stroke();
+      ctx.lineWidth = 1;
+
+      ctx.font = "10px serif";
+      ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText(icon, GW - 70, 17);
+      ctx.fillStyle = color;
+      ctx.font = "bold 8px monospace";
+      ctx.textAlign = "left";
+      ctx.fillText(`${label} ${secs}s`, GW - 57, 17);
+    }
+
+    function roundRect(c, x, y, w, h, r) {
+      c.beginPath();
+      c.moveTo(x + r, y);
+      c.lineTo(x + w - r, y); c.arcTo(x + w, y, x + w, y + r, r);
+      c.lineTo(x + w, y + h - r); c.arcTo(x + w, y + h, x + w - r, y + h, r);
+      c.lineTo(x + r, y + h); c.arcTo(x, y + h, x, y + h - r, r);
+      c.lineTo(x, y + r); c.arcTo(x, y, x + r, y, r);
+      c.closePath();
+    }
+
     // ── draw monster ──
     function drawMonster(mon, t, catching) {
       const bob = catching ? 0 : Math.sin(t * 0.0023 + mon.x * 0.02) * 5;
@@ -610,6 +685,21 @@ export default function WildCatch() {
           s.phase = "playing";
           s.monster = spawnMonster(s.ballLvl, s.charLvl);
 
+          // Item spawn — 35% chance, only if no item already on field
+          if (!s.item && Math.random() < 0.35) {
+            const type = Math.random() < 0.5 ? "speed" : "slow";
+            const side = Math.random() > 0.5 ? 1 : -1;
+            s.item = {
+              type,
+              x: GW / 2 + side * (60 + Math.random() * 100),
+              y: 80 + Math.random() * 120,
+              vx: (Math.random() > 0.5 ? 1 : -1) * (0.8 + Math.random() * 0.8),
+              vy: (Math.random() > 0.5 ? 0.5 : -0.5) * 0.7,
+              timer: 300,
+            };
+            showMsg(type === "speed" ? "⚡ 빠르게 아이템 등장!" : "🐌 느리게 아이템 등장!", true);
+          }
+
           // Math quiz every 5 catches
           if (s.totalCaught % 5 === 0) {
             setTimeout(() => triggerQuiz(), 700);
@@ -651,8 +741,19 @@ export default function WildCatch() {
         }
 
       } else {
-        if (s.keys.has("ArrowLeft"))  s.player.x = Math.max(22, s.player.x - 5);
-        if (s.keys.has("ArrowRight")) s.player.x = Math.min(GW - 22, s.player.x + 5);
+        // ── effect timer ──
+        if (s.effect) {
+          s.effect.timer--;
+          if (s.effect.timer <= 0) {
+            showMsg(s.effect.type === "speed" ? "⚡ 빠르게 종료!" : "🐌 느리게 종료!", false);
+            s.effect = null;
+          }
+        }
+
+        // ── player movement (speed boost if active) ──
+        const moveSpd = (s.effect && s.effect.type === "speed") ? 10 : 5;
+        if (s.keys.has("ArrowLeft"))  s.player.x = Math.max(22, s.player.x - moveSpd);
+        if (s.keys.has("ArrowRight")) s.player.x = Math.min(GW - 22, s.player.x + moveSpd);
 
         if (s.ball.active) {
           s.ball.y -= 9;
@@ -660,6 +761,7 @@ export default function WildCatch() {
             s.ball.active = false;
             showMsg("놓쳤다! 다시 도전!", false);
           }
+          // ball vs monster
           if (s.monster) {
             const dx = s.ball.x - s.monster.x;
             const dy = s.ball.y - s.monster.y;
@@ -668,11 +770,48 @@ export default function WildCatch() {
               s.catchTimer = 0;
             }
           }
+          // ball vs item
+          if (s.item) {
+            const dx = s.ball.x - s.item.x;
+            const dy = s.ball.y - s.item.y;
+            if (Math.sqrt(dx * dx + dy * dy) < 18 + BALL_R + 4) {
+              const type = s.item.type;
+              s.item = null;
+              s.ball.active = false;
+              s.effect = { type, timer: 300 };
+              spawnParticles(s.ball.x, s.ball.y, true);
+              showMsg(type === "speed" ? "⚡ 빠르게 5초!" : "🐌 느리게 5초!", true);
+            }
+          }
         }
 
+        // ── item update ──
+        if (s.item) {
+          s.item.timer--;
+          if (s.item.timer <= 0) {
+            // item escapes
+            s.item.vx = (s.item.x < GW / 2 ? -1 : 1) * 8;
+            s.item.vy = -5;
+            // fly off then remove
+            s.item = null;
+            showMsg("아이템이 도망갔다!", false);
+          } else {
+            s.item.x += s.item.vx;
+            s.item.y += s.item.vy;
+            const ITEM_R = 22;
+            const maxIY = GROUND_Y * 0.65;
+            if (s.item.x < ITEM_R || s.item.x > GW - ITEM_R) s.item.vx *= -1;
+            if (s.item.y < 20     || s.item.y > maxIY)       s.item.vy *= -1;
+            s.item.x = Math.max(ITEM_R, Math.min(GW - ITEM_R, s.item.x));
+            s.item.y = Math.max(20, Math.min(maxIY, s.item.y));
+          }
+        }
+
+        // ── monster movement (slow if active) ──
         if (s.monster) {
-          s.monster.x += s.monster.vx;
-          s.monster.y += s.monster.vy;
+          const slowFactor = (s.effect && s.effect.type === "slow") ? 0.35 : 1;
+          s.monster.x += s.monster.vx * slowFactor;
+          s.monster.y += s.monster.vy * slowFactor;
           const maxY = GROUND_Y * 0.60;
           if (s.monster.x < MON_R || s.monster.x > GW - MON_R) s.monster.vx *= -1;
           if (s.monster.y < 22   || s.monster.y > maxY)        s.monster.vy *= -1;
@@ -681,8 +820,10 @@ export default function WildCatch() {
         }
 
         if (s.monster) drawMonster(s.monster, t, false);
+        if (s.item) drawItem(s.item);
         if (s.ball.active) drawBall(s.ball.x, s.ball.y);
         drawParticles();
+        drawEffectHud();
         if (s.shake > 0) s.shake--;
         drawPlayer(s.player.x, s.shake);
       }
