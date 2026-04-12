@@ -1240,10 +1240,29 @@ export default function WildCatch() {
         .touch-btn { -webkit-tap-highlight-color: transparent; touch-action: none; }
         .touch-btn:active { transform:scale(0.91); filter:brightness(1.4); }
         * { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+        @media (max-width: 600px) {
+          .game-title { font-size: 13px !important; margin-bottom: 6px !important; }
+          .subtitle-row { margin: -4px 0 6px !important; gap: 8px !important; }
+          .subtitle-text { display: none !important; }
+          .stat-panel { padding: 4px 8px !important; gap: 6px !important; margin-bottom: 6px !important; }
+          .stat-box { min-width: 50px !important; }
+          .stat-box-label { font-size: 6px !important; margin-bottom: 1px !important; }
+          .stat-box-value { font-size: 11px !important; }
+          .stat-box-sub { font-size: 6px !important; }
+          .stat-divider { margin: 0 1px !important; }
+          .btn-row { margin-bottom: 5px !important; gap: 6px !important; }
+          .result-btn { padding: 5px 12px !important; font-size: 9px !important; }
+          .xp-section { margin-bottom: 3px !important; }
+          .msg-banner { height: 24px !important; margin-bottom: 1px !important; }
+          .game-canvas { max-width: 100vw !important; border-radius: 0 !important; }
+          .canvas-wrapper { max-width: 100vw !important; width: 100% !important; }
+          .controls-row { margin-top: 8px !important; gap: 12px !important; }
+          .hint-text { font-size: 6px !important; margin-top: 4px !important; }
+        }
       `}</style>
 
       {/* Title */}
-      <h1 style={{
+      <h1 className="game-title" style={{
         color: "#FFD700", fontSize: 20, margin: "0 0 14px",
         textShadow: "3px 3px 0 #7A5C00, 0 0 24px #FFD70077",
         animation: "glow 3s ease infinite", letterSpacing: 2,
@@ -1251,11 +1270,11 @@ export default function WildCatch() {
       }}>
         🌟 이준캐치 🌟
       </h1>
-      <div style={{
+      <div className="subtitle-row" style={{
         display: "flex", alignItems: "center", gap: 14,
         margin: "-10px 0 14px",
       }}>
-        <p style={{
+        <p className="subtitle-text" style={{
           color: "#FFD70099", fontSize: 11, margin: 0,
           fontFamily: "'Noto Sans KR', monospace", letterSpacing: 1,
         }}>
@@ -1279,7 +1298,7 @@ export default function WildCatch() {
       </div>
 
       {/* Stats panel */}
-      <div style={{
+      <div className="stat-panel" style={{
         display: "flex", gap: 12, marginBottom: 10, flexWrap: "wrap", justifyContent: "center",
         background: "rgba(255,255,255,0.04)",
         border: `1px solid ${bc}44`,
@@ -1287,21 +1306,21 @@ export default function WildCatch() {
         boxShadow: `0 0 16px ${bc}22`,
       }}>
         <StatBox label="캐릭터" value={`Lv.${ui.charLvl}`} sub={`/ 50`} color={charTheme.accent || "#78B7FF"} />
-        <div style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
+        <div className="stat-divider" style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
         <StatBox label="BALL" value={`★ Lv.${ui.ballLvl}`} sub={ui.ballName} color={bc} />
-        <div style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
+        <div className="stat-divider" style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
         <StatBox label="포획수" value={ui.totalCaught} color="#FFD740" />
-        <div style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
+        <div className="stat-divider" style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
         <StatBox label="확률" value={`${pct}%`} color={pctColor} />
-        <div style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
+        <div className="stat-divider" style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
         <StatBox label="콤보" value={`${ui.combo}콤보`} sub={`최고 ${ui.maxCombo}`} color="#FF80AB" />
-        <div style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
+        <div className="stat-divider" style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
         <StatBox label="특별" value={`🌟${ui.specialCaught}`} color="#FFD700" />
       </div>
 
       {/* 버튼 행 */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-        <button onClick={() => setShowResult(true)} style={{
+      <div className="btn-row" style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+        <button className="result-btn" onClick={() => setShowResult(true)} style={{
           padding: "6px 18px",
           background: "linear-gradient(135deg, #1A2744, #0D1E3D)",
           border: "1px solid #FFD70066", borderRadius: 20,
@@ -1311,7 +1330,7 @@ export default function WildCatch() {
         }}>
           📊 오늘의 결과
         </button>
-        <button onClick={() => {
+        <button className="result-btn" onClick={() => {
           gs.current.paused = true;
           setShowRules(true);
         }} style={{
@@ -1327,7 +1346,7 @@ export default function WildCatch() {
       </div>
 
       {/* XP bar */}
-      <div style={{ width: Math.min(GW, 520), marginBottom: 6, maxWidth: "95vw" }}>
+      <div className="xp-section" style={{ width: Math.min(GW, 520), marginBottom: 6, maxWidth: "95vw" }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
           <span style={{ color: "#556", fontSize: 7 }}>XP</span>
           <span style={{ color: bc, fontSize: 7 }}>{ui.xp} / {ui.xpReq}</span>
@@ -1352,7 +1371,7 @@ export default function WildCatch() {
       </div>
 
       {/* Message banner */}
-      <div style={{ height: 32, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 2 }}>
+      <div className="msg-banner" style={{ height: 32, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 2 }}>
         {ui.message && (
           <div style={{
             color: ui.msgOk ? "#69F0AE" : "#FF5252",
@@ -1367,8 +1386,8 @@ export default function WildCatch() {
       </div>
 
       {/* Canvas + Quiz overlay wrapper */}
-      <div style={{ position: "relative", display: "inline-block", maxWidth: "95vw" }}>
-        <canvas ref={canvasRef} width={GW} height={GH} style={{
+      <div className="canvas-wrapper" style={{ position: "relative", display: "inline-block", maxWidth: "95vw" }}>
+        <canvas ref={canvasRef} width={GW} height={GH} className="game-canvas" style={{
           display: "block", maxWidth: "95vw",
           border: `2px solid ${bc}66`,
           borderRadius: 8,
@@ -1411,7 +1430,7 @@ export default function WildCatch() {
       </div>
 
       {/* Touch controls */}
-      <div style={{ display: "flex", gap: 16, marginTop: 12, alignItems: "center" }}
+      <div className="controls-row" style={{ display: "flex", gap: 16, marginTop: 12, alignItems: "center" }}
         onContextMenu={(e) => e.preventDefault()}>
         <button className="touch-btn"
           {...makeTouchMove("L")}
@@ -1439,7 +1458,7 @@ export default function WildCatch() {
       </div>
 
       {/* Keyboard hint */}
-      <div style={{ color: "#4A6080", fontSize: 7, marginTop: 6, textAlign: "center", lineHeight: 2.2, fontFamily: "'Noto Sans KR', monospace" }}>
+      <div className="hint-text" style={{ color: "#4A6080", fontSize: 7, marginTop: 6, textAlign: "center", lineHeight: 2.2, fontFamily: "'Noto Sans KR', monospace" }}>
         ← → 이동  •  SPACE 던지기  •  5마리마다 레벨업 (10구간은 10마리)
       </div>
 
@@ -1480,10 +1499,10 @@ export default function WildCatch() {
 
 function StatBox({ label, value, sub, color }) {
   return (
-    <div style={{ textAlign: "center", minWidth: 70 }}>
-      <div style={{ color: "#3A4A64", fontSize: 7, marginBottom: 3 }}>{label}</div>
-      <div style={{ color, fontSize: 12, textShadow: `0 0 8px ${color}88` }}>{value}</div>
-      {sub && <div style={{ color: "#445", fontSize: 7, marginTop: 2 }}>{sub}</div>}
+    <div className="stat-box" style={{ textAlign: "center", minWidth: 70 }}>
+      <div className="stat-box-label" style={{ color: "#3A4A64", fontSize: 7, marginBottom: 3 }}>{label}</div>
+      <div className="stat-box-value" style={{ color, fontSize: 12, textShadow: `0 0 8px ${color}88` }}>{value}</div>
+      {sub && <div className="stat-box-sub" style={{ color: "#445", fontSize: 7, marginTop: 2 }}>{sub}</div>}
     </div>
   );
 }
