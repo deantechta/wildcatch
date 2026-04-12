@@ -8,41 +8,116 @@ const BALL_R = 11;
 const MON_R = 28;
 
 const MONSTERS = [
-  // ── common (Lv 1-3) ──
-  { level: 1,  emoji: "🐛", name: "꼬물이",   rarity: "common"   },
-  { level: 1,  emoji: "🐌", name: "달팽달팽", rarity: "common"   },
-  { level: 1,  emoji: "🐞", name: "무당벌레", rarity: "common"   },
-  { level: 2,  emoji: "🐝", name: "꿀벌이",   rarity: "common"   },
-  { level: 2,  emoji: "🦋", name: "나비요",   rarity: "common"   },
-  { level: 2,  emoji: "🐸", name: "개굴이",   rarity: "common"   },
-  { level: 3,  emoji: "🦊", name: "여우린",   rarity: "common"   },
-  { level: 3,  emoji: "🐹", name: "햄찌",     rarity: "common"   },
-  { level: 3,  emoji: "🐧", name: "펭귄이",   rarity: "common"   },
-  // ── uncommon (Lv 4-5) ──
-  { level: 4,  emoji: "🐰", name: "토실이",   rarity: "uncommon" },
-  { level: 4,  emoji: "🦆", name: "꽥꽥이",   rarity: "uncommon" },
-  { level: 4,  emoji: "🐨", name: "코알라",   rarity: "uncommon" },
-  { level: 5,  emoji: "🦝", name: "너구리",   rarity: "uncommon" },
-  { level: 5,  emoji: "🦙", name: "알파카",   rarity: "uncommon" },
-  { level: 5,  emoji: "🦜", name: "앵무새",   rarity: "uncommon" },
-  // ── rare (Lv 6-7) ──
-  { level: 6,  emoji: "🐯", name: "호랑이",   rarity: "rare"     },
-  { level: 6,  emoji: "🦁", name: "사자왕",   rarity: "rare"     },
-  { level: 6,  emoji: "🐼", name: "팬더곰",   rarity: "rare"     },
-  { level: 7,  emoji: "🦄", name: "유니콘",   rarity: "rare"     },
-  { level: 7,  emoji: "🐉", name: "동양룡",   rarity: "rare"     },
-  { level: 7,  emoji: "🦋", name: "신비나비", rarity: "rare"     },
-  // ── epic (Lv 8-9) ──
-  { level: 8,  emoji: "🐲", name: "드래곤",   rarity: "epic"     },
-  { level: 8,  emoji: "🦅", name: "폭풍독수리", rarity: "epic"   },
-  { level: 8,  emoji: "🌊", name: "파도신",   rarity: "epic"     },
-  { level: 9,  emoji: "⚡", name: "번개신",   rarity: "epic"     },
-  { level: 9,  emoji: "🔥", name: "불꽃왕",   rarity: "epic"     },
-  { level: 9,  emoji: "🌀", name: "회오리",   rarity: "epic"     },
-  // ── legend (Lv 10) ──
-  { level: 10, emoji: "🌟", name: "별이",     rarity: "legend"   },
-  { level: 10, emoji: "🌈", name: "무지개신", rarity: "legend"   },
-  { level: 10, emoji: "🍀", name: "행운의신", rarity: "legend"   },
+  // ── common Lv 1 (10종) ──
+  { level: 1, emoji: "🐛", name: "꼬물이",   rarity: "common" },
+  { level: 1, emoji: "🐌", name: "달팽달팽", rarity: "common" },
+  { level: 1, emoji: "🐞", name: "무당벌레", rarity: "common" },
+  { level: 1, emoji: "🐜", name: "개미야",   rarity: "common" },
+  { level: 1, emoji: "🦗", name: "귀뚜리",   rarity: "common" },
+  { level: 1, emoji: "🪲", name: "딱정이",   rarity: "common" },
+  { level: 1, emoji: "🪳", name: "바퀴롤",   rarity: "common" },
+  { level: 1, emoji: "🦟", name: "모기야",   rarity: "common" },
+  { level: 1, emoji: "🐢", name: "거북이",   rarity: "common" },
+  { level: 1, emoji: "🐊", name: "악어꼬",   rarity: "common" },
+  // ── common Lv 2 (10종) ──
+  { level: 2, emoji: "🐝", name: "꿀벌이",   rarity: "common" },
+  { level: 2, emoji: "🦋", name: "나비요",   rarity: "common" },
+  { level: 2, emoji: "🐸", name: "개굴이",   rarity: "common" },
+  { level: 2, emoji: "🐭", name: "쥐돌이",   rarity: "common" },
+  { level: 2, emoji: "🐹", name: "햄찌",     rarity: "common" },
+  { level: 2, emoji: "🐇", name: "토끼야",   rarity: "common" },
+  { level: 2, emoji: "🦔", name: "고슴이",   rarity: "common" },
+  { level: 2, emoji: "🐿",  name: "다람쥐",   rarity: "common" },
+  { level: 2, emoji: "🦦", name: "수달이",   rarity: "common" },
+  { level: 2, emoji: "🦫", name: "비버야",   rarity: "common" },
+  // ── common Lv 3 (10종) ──
+  { level: 3, emoji: "🦊", name: "여우린",   rarity: "common" },
+  { level: 3, emoji: "🐧", name: "펭귄이",   rarity: "common" },
+  { level: 3, emoji: "🐦", name: "참새야",   rarity: "common" },
+  { level: 3, emoji: "🦜", name: "앵무새",   rarity: "common" },
+  { level: 3, emoji: "🦢", name: "백조롤",   rarity: "common" },
+  { level: 3, emoji: "🦩", name: "플라밍",   rarity: "common" },
+  { level: 3, emoji: "🦚", name: "공작새",   rarity: "common" },
+  { level: 3, emoji: "🦉", name: "부엉이",   rarity: "common" },
+  { level: 3, emoji: "🐓", name: "닭돌이",   rarity: "common" },
+  { level: 3, emoji: "🦤", name: "도도새",   rarity: "common" },
+  // ── uncommon Lv 4 (10종) ──
+  { level: 4, emoji: "🐰", name: "토실이",   rarity: "uncommon" },
+  { level: 4, emoji: "🦆", name: "꽥꽥이",   rarity: "uncommon" },
+  { level: 4, emoji: "🐨", name: "코알라",   rarity: "uncommon" },
+  { level: 4, emoji: "🐼", name: "팬더곰",   rarity: "uncommon" },
+  { level: 4, emoji: "🦝", name: "너구리",   rarity: "uncommon" },
+  { level: 4, emoji: "🦙", name: "알파카",   rarity: "uncommon" },
+  { level: 4, emoji: "🦘", name: "캥거루",   rarity: "uncommon" },
+  { level: 4, emoji: "🦨", name: "스컹크",   rarity: "uncommon" },
+  { level: 4, emoji: "🦡", name: "오소리",   rarity: "uncommon" },
+  { level: 4, emoji: "🐻", name: "곰돌이",   rarity: "uncommon" },
+  // ── uncommon Lv 5 (10종) ──
+  { level: 5, emoji: "🐮", name: "무우",     rarity: "uncommon" },
+  { level: 5, emoji: "🐷", name: "꿀꿀이",   rarity: "uncommon" },
+  { level: 5, emoji: "🐸", name: "점프개굴", rarity: "uncommon" },
+  { level: 5, emoji: "🦌", name: "사슴이",   rarity: "uncommon" },
+  { level: 5, emoji: "🐑", name: "양양이",   rarity: "uncommon" },
+  { level: 5, emoji: "🐐", name: "염소야",   rarity: "uncommon" },
+  { level: 5, emoji: "🦙", name: "라마야",   rarity: "uncommon" },
+  { level: 5, emoji: "🦏", name: "코뿔소",   rarity: "uncommon" },
+  { level: 5, emoji: "🦛", name: "하마야",   rarity: "uncommon" },
+  { level: 5, emoji: "🐃", name: "들소야",   rarity: "uncommon" },
+  // ── rare Lv 6 (10종) ──
+  { level: 6, emoji: "🐯", name: "호랑이",   rarity: "rare" },
+  { level: 6, emoji: "🦁", name: "사자왕",   rarity: "rare" },
+  { level: 6, emoji: "🐆", name: "치타야",   rarity: "rare" },
+  { level: 6, emoji: "🐅", name: "백호",     rarity: "rare" },
+  { level: 6, emoji: "🐻‍❄️", name: "북극곰",   rarity: "rare" },
+  { level: 6, emoji: "🦊", name: "붉은여우", rarity: "rare" },
+  { level: 6, emoji: "🐺", name: "늑대왕",   rarity: "rare" },
+  { level: 6, emoji: "🦍", name: "고릴라",   rarity: "rare" },
+  { level: 6, emoji: "🦧", name: "오랑우탄", rarity: "rare" },
+  { level: 6, emoji: "🐘", name: "코끼리",   rarity: "rare" },
+  // ── rare Lv 7 (10종) ──
+  { level: 7, emoji: "🦄", name: "유니콘",   rarity: "rare" },
+  { level: 7, emoji: "🐉", name: "동양룡",   rarity: "rare" },
+  { level: 7, emoji: "🦅", name: "독수리",   rarity: "rare" },
+  { level: 7, emoji: "🦋", name: "신비나비", rarity: "rare" },
+  { level: 7, emoji: "🦈", name: "상어왕",   rarity: "rare" },
+  { level: 7, emoji: "🐋", name: "고래신",   rarity: "rare" },
+  { level: 7, emoji: "🦑", name: "오징어",   rarity: "rare" },
+  { level: 7, emoji: "🦞", name: "바닷가재", rarity: "rare" },
+  { level: 7, emoji: "🐊", name: "대악어",   rarity: "rare" },
+  { level: 7, emoji: "🦎", name: "도마뱀",   rarity: "rare" },
+  // ── epic Lv 8 (10종) ──
+  { level: 8, emoji: "🐲", name: "드래곤",   rarity: "epic" },
+  { level: 8, emoji: "🌊", name: "파도신",   rarity: "epic" },
+  { level: 8, emoji: "🌋", name: "화산귀",   rarity: "epic" },
+  { level: 8, emoji: "🌪", name: "폭풍신",   rarity: "epic" },
+  { level: 8, emoji: "❄️",  name: "얼음왕",   rarity: "epic" },
+  { level: 8, emoji: "🌩",  name: "천둥신",   rarity: "epic" },
+  { level: 8, emoji: "☄️",  name: "혜성이",   rarity: "epic" },
+  { level: 8, emoji: "🌑", name: "다크문",   rarity: "epic" },
+  { level: 8, emoji: "🦂", name: "전갈왕",   rarity: "epic" },
+  { level: 8, emoji: "🐙", name: "문어대왕", rarity: "epic" },
+  // ── epic Lv 9 (10종) ──
+  { level: 9, emoji: "⚡", name: "번개신",   rarity: "epic" },
+  { level: 9, emoji: "🔥", name: "불꽃왕",   rarity: "epic" },
+  { level: 9, emoji: "🌀", name: "회오리",   rarity: "epic" },
+  { level: 9, emoji: "💀", name: "해골귀",   rarity: "epic" },
+  { level: 9, emoji: "👁",  name: "눈의신",   rarity: "epic" },
+  { level: 9, emoji: "🌙", name: "달의신",   rarity: "epic" },
+  { level: 9, emoji: "☀️",  name: "태양신",   rarity: "epic" },
+  { level: 9, emoji: "🌊", name: "심해왕",   rarity: "epic" },
+  { level: 9, emoji: "🪐", name: "행성신",   rarity: "epic" },
+  { level: 9, emoji: "🌌", name: "은하수",   rarity: "epic" },
+  // ── legend Lv 10 (10종) ──
+  { level: 10, emoji: "🌟", name: "별이",     rarity: "legend" },
+  { level: 10, emoji: "🌈", name: "무지개신", rarity: "legend" },
+  { level: 10, emoji: "🍀", name: "행운의신", rarity: "legend" },
+  { level: 10, emoji: "💎", name: "다이아",   rarity: "legend" },
+  { level: 10, emoji: "👑", name: "왕의신",   rarity: "legend" },
+  { level: 10, emoji: "🔮", name: "예언자",   rarity: "legend" },
+  { level: 10, emoji: "🌸", name: "봄의신",   rarity: "legend" },
+  { level: 10, emoji: "🦋", name: "환생나비", rarity: "legend" },
+  { level: 10, emoji: "✨", name: "빛의신",   rarity: "legend" },
+  { level: 10, emoji: "🪄", name: "마법사",   rarity: "legend" },
 ];
 
 const RARITY_COLOR = {
@@ -147,12 +222,14 @@ export default function WildCatch() {
     msgOk: true,
     item: null,   // { type, x, y, vx, vy, timer } — 300 frames ≈ 5s
     effect: null, // { type, timer }
+    monTimer: 900, // 15s × 60fps — 몬스터 제한 시간
     combo: 0,
     maxCombo: 0,
     specialCaught: 0,
-    specialBanner: 0, // frames remaining for center banner
-    missStreak: 0,    // consecutive misses (포획/도망 실패)
+    specialBanner: 0,
+    missStreak: 0,
     gameOver: false,
+    goldenBall: false, // 5콤보 보상: 다음 1발 확정 포획
   });
 
   const [ui, setUi] = useState({
@@ -161,7 +238,7 @@ export default function WildCatch() {
     collection: [], ballName: BALL_NAMES[0],
     catchPct: 88, charLvl: 1,
     combo: 0, maxCombo: 0, specialCaught: 0,
-    missStreak: 0,
+    missStreak: 0, goldenBall: false,
   });
 
   const [gameOver, setGameOver] = useState(false);
@@ -186,6 +263,7 @@ export default function WildCatch() {
       collection: [...s.collection.slice(-30)],
       ballName: BALL_NAMES[s.ballLvl - 1],
       combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught,
+      goldenBall: s.goldenBall,
       catchPct: pct,
       charLvl: s.charLvl,
     });
@@ -200,7 +278,7 @@ export default function WildCatch() {
       const req = XP_REQ[s.ballLvl - 1] === Infinity ? 999 : XP_REQ[s.ballLvl - 1];
       const mon = s.monster;
       const pct = mon ? Math.round(catchRate(s.ballLvl, mon.level) * 100) : 0;
-      setUi(prev => ({ ...prev, message: "", xp: s.xp, xpReq: req, totalCaught: s.totalCaught, catchPct: pct, charLvl: s.charLvl, combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught }));
+      setUi(prev => ({ ...prev, message: "", xp: s.xp, xpReq: req, totalCaught: s.totalCaught, catchPct: pct, charLvl: s.charLvl, combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught, goldenBall: s.goldenBall }));
     }, 2200);
   }
 
@@ -451,7 +529,21 @@ export default function WildCatch() {
 
     // ── draw flying ball ──
     function drawBall(bx, by) {
-      const c = BALL_COLORS[s.ballLvl - 1];
+      const isGolden = s.ball.golden;
+      const c = isGolden ? "#FFD700" : BALL_COLORS[s.ballLvl - 1];
+
+      // golden outer sparkle
+      if (isGolden) {
+        ctx.shadowColor = "#FFD700"; ctx.shadowBlur = 24;
+        for (let i = 0; i < 6; i++) {
+          const a = Date.now() * 0.006 + (i / 6) * Math.PI * 2;
+          const r = BALL_R + 8 + Math.sin(Date.now() * 0.01 + i) * 3;
+          ctx.fillStyle = `rgba(255,215,0,${0.6 - i * 0.08})`;
+          ctx.beginPath(); ctx.arc(bx + Math.cos(a) * r * 0.4, by + Math.sin(a) * r * 0.4, 2.5, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+      }
+
       for (let i = 1; i <= 5; i++) {
         ctx.globalAlpha = (0.15 * i) / 5;
         ctx.fillStyle = c;
@@ -754,8 +846,8 @@ export default function WildCatch() {
         drawPlayer(s.player.x, 0);
 
         if (s.catchTimer >= 1500) {
-          const rate = catchRate(s.ballLvl, s.monster.level);
-          const ok = Math.random() < rate;
+          const rate = s.monster.special ? 0.08 : catchRate(s.ballLvl, s.monster.level);
+          const ok = s.ball.golden || Math.random() < rate;
           s.ball.active = false;
 
           if (ok) {
@@ -769,11 +861,18 @@ export default function WildCatch() {
             s.combo++;
             s.missStreak = 0;
             if (s.combo > s.maxCombo) s.maxCombo = s.combo;
+            if (s.combo % 5 === 0) {
+              s.goldenBall = true;
+              showMsg(`🏆 ${s.combo}콤보! 황금볼 획득!`, true);
+            }
 
             if (wasSpecial) {
               s.specialCaught++;
               s.specialBanner = 200;
               spawnLevelUpEffect(s.monster.x, s.monster.y);
+              // 특별 몬스터 포획: 캐릭터 레벨 +3 보너스
+              s.charLvl = Math.min(50, s.charLvl + 3);
+              spawnLevelUpEffect(s.player.x, GROUND_Y - PLAYER_H);
             }
 
             // Character level up check
@@ -816,6 +915,7 @@ export default function WildCatch() {
           const isSpecialSpawn = s.totalCaught > 0 && s.totalCaught % 10 === 0;
           s.phase = "playing";
           s.monster = spawnMonster(s.ballLvl, s.charLvl, isSpecialSpawn);
+          s.monTimer = 900;
           if (isSpecialSpawn) showMsg("🌟 특별 몬스터 등장!", true);
 
           // Item spawn — 35% chance, only if no item already on field
@@ -871,6 +971,7 @@ export default function WildCatch() {
         if (offscreen || s.escapeAlpha <= 0) {
           s.phase = "playing";
           s.monster = spawnMonster(s.ballLvl, s.charLvl);
+          s.monTimer = 900;
         }
 
       } else {
@@ -960,11 +1061,38 @@ export default function WildCatch() {
           s.monster.y = Math.max(22,    Math.min(maxY,        s.monster.y));
         }
 
+        // ── monster timer ──
+        if (s.phase === "playing" && s.monster && !s.ball.active) {
+          s.monTimer--;
+          if (s.monTimer <= 0) {
+            // 시간 초과 → 도망 처리 (miss 아님)
+            s.combo = 0;
+            const dir = s.monster.x < GW / 2 ? -1 : 1;
+            s.monster.vx = dir * 9;
+            s.monster.vy = -5;
+            s.escapeAlpha = 1.0;
+            s.phase = "escaping";
+            showMsg("⏰ 시간 초과! 도망갔다!", false);
+          }
+        }
+
         if (s.monster) drawMonster(s.monster, t, false);
         if (s.item) drawItem(s.item);
         if (s.ball.active) drawBall(s.ball.x, s.ball.y);
         drawParticles();
         drawSpecialBanner();
+        // 5초 이하 카운트다운
+        if (s.monTimer > 0 && s.monTimer <= 300 && s.phase === "playing") {
+          const secs = Math.ceil(s.monTimer / 60);
+          const pulse = 0.7 + 0.3 * Math.sin(Date.now() * 0.015);
+          ctx.globalAlpha = pulse;
+          ctx.fillStyle = secs <= 2 ? "#FF5252" : "#FF9800";
+          ctx.font = `bold ${secs <= 2 ? 32 : 26}px monospace`;
+          ctx.textAlign = "center"; ctx.textBaseline = "top";
+          ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 16;
+          ctx.fillText(`⏰ ${secs}`, GW / 2, 8);
+          ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+        }
         drawEffectHud();
         if (s.shake > 0) s.shake--;
         drawPlayer(s.player.x, s.shake);
@@ -979,7 +1107,9 @@ export default function WildCatch() {
       s.keys.add(e.key);
       if ((e.key === " " || e.code === "Space") && !s.ball.active && s.phase === "playing") {
         e.preventDefault();
-        s.ball = { x: s.player.x, y: GROUND_Y - PLAYER_H + 8, active: true };
+        const golden = s.goldenBall;
+        if (golden) s.goldenBall = false;
+        s.ball = { x: s.player.x, y: GROUND_Y - PLAYER_H + 8, active: true, golden };
       }
       if (["ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
     }
@@ -1014,7 +1144,9 @@ export default function WildCatch() {
   const doThrow = () => {
     const s = gs.current;
     if (!s.ball.active && s.phase === "playing") {
-      s.ball = { x: s.player.x, y: GROUND_Y - PLAYER_H + 8, active: true };
+      const golden = s.goldenBall;
+      if (golden) s.goldenBall = false;
+      s.ball = { x: s.player.x, y: GROUND_Y - PLAYER_H + 8, active: true, golden };
     }
   };
 
@@ -1189,6 +1321,7 @@ export default function WildCatch() {
             s.item = null; s.effect = null;
             s.combo = 0; s.maxCombo = 0; s.specialCaught = 0;
             s.specialBanner = 0; s.missStreak = 0; s.gameOver = false;
+            s.goldenBall = false; s.monTimer = 900;
             setGameOver(false);
             syncUi("새로운 모험 시작!", true);
           }} />
@@ -1202,11 +1335,14 @@ export default function WildCatch() {
           style={btnStyle("#1565C0")}>◀</button>
         <button className="touch-btn"
           onPointerDown={doThrow} onPointerUp={() => {}}
-          style={{ ...btnStyle(bc), minWidth: 130, fontSize: 10,
-            boxShadow: `0 0 20px ${bc}66`,
-            background: `linear-gradient(135deg, ${bc}33, ${bc}55)`,
+          style={{ ...btnStyle(ui.goldenBall ? "#FFD700" : bc), minWidth: 130, fontSize: 10,
+            boxShadow: ui.goldenBall ? "0 0 24px #FFD70099" : `0 0 20px ${bc}66`,
+            background: ui.goldenBall
+              ? "linear-gradient(135deg, #7A5C0088, #FFD70055)"
+              : `linear-gradient(135deg, ${bc}33, ${bc}55)`,
+            border: ui.goldenBall ? "2px solid #FFD700" : undefined,
           }}>
-          ⚡ 던지기!
+          {ui.goldenBall ? "🌟 황금볼!" : "⚡ 던지기!"}
         </button>
         <button className="touch-btn"
           onPointerDown={() => startMove("R")} onPointerUp={stopMove} onPointerLeave={stopMove}
