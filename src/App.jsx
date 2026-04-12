@@ -703,8 +703,14 @@ export default function WildCatch() {
         animation: "glow 3s ease infinite", letterSpacing: 2,
         fontFamily: "'Noto Sans KR', 'Press Start 2P', monospace",
       }}>
-        🌟 준이 캐치 🌟
+        🌟 이준캐치 🌟
       </h1>
+      <p style={{
+        color: "#FFD70099", fontSize: 11, margin: "-10px 0 14px",
+        fontFamily: "'Noto Sans KR', monospace", letterSpacing: 1,
+      }}>
+        우리 아이를 위한 모험
+      </p>
 
       {/* Stats panel */}
       <div style={{
