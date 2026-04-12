@@ -104,7 +104,13 @@ export default function WildCatch() {
     catchPct: 88, charLvl: 1,
   });
 
-  const [quiz, setQuiz] = useState(null); // null | { a, b, answer, wrong }
+  const [quiz, setQuiz] = useState(null); // null | { a, b, op, answer, choices, wrong }
+  const [playTime, setPlayTime] = useState(0); // seconds since session start
+
+  useEffect(() => {
+    const id = setInterval(() => setPlayTime(t => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   function syncUi(msg, ok) {
     const s = gs.current;
@@ -770,12 +776,32 @@ export default function WildCatch() {
       }}>
         🌟 이준캐치 🌟
       </h1>
-      <p style={{
-        color: "#FFD70099", fontSize: 11, margin: "-10px 0 14px",
-        fontFamily: "'Noto Sans KR', monospace", letterSpacing: 1,
+      <div style={{
+        display: "flex", alignItems: "center", gap: 14,
+        margin: "-10px 0 14px",
       }}>
-        우리 아이를 위한 모험
-      </p>
+        <p style={{
+          color: "#FFD70099", fontSize: 11, margin: 0,
+          fontFamily: "'Noto Sans KR', monospace", letterSpacing: 1,
+        }}>
+          우리 아이를 위한 모험
+        </p>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 5,
+          background: "rgba(255,255,255,0.06)", border: "1px solid #ffffff18",
+          borderRadius: 20, padding: "3px 10px",
+        }}>
+          <span style={{ fontSize: 9 }}>⏱</span>
+          <span style={{
+            color: "#90CAF9", fontSize: 10,
+            fontFamily: "monospace", letterSpacing: 1,
+          }}>
+            {String(Math.floor(playTime / 3600)).padStart(2,"0")}:
+            {String(Math.floor((playTime % 3600) / 60)).padStart(2,"0")}:
+            {String(playTime % 60).padStart(2,"0")}
+          </span>
+        </div>
+      </div>
 
       {/* Stats panel */}
       <div style={{
@@ -916,7 +942,13 @@ function StatBox({ label, value, sub, color }) {
 }
 
 function QuizModal({ quiz, onAnswer }) {
+  const [input, setInput] = useState("");
   const opColor = quiz.op === "+" ? "#64B5F6" : "#FF8A65";
+
+  const submit = () => {
+    const num = parseInt(input, 10);
+    if (!isNaN(num)) { onAnswer(num); setInput(""); }
+  };
 
   return (
     <div style={{
@@ -928,7 +960,7 @@ function QuizModal({ quiz, onAnswer }) {
       <div style={{
         background: "linear-gradient(135deg, #0D1E3D, #1A2744)",
         border: `2px solid ${opColor}77`,
-        borderRadius: 16, padding: "28px 32px",
+        borderRadius: 16, padding: "24px 28px",
         textAlign: "center", width: 260,
         boxShadow: `0 0 40px ${opColor}44`,
         fontFamily: "'Noto Sans KR', monospace",
@@ -936,21 +968,40 @@ function QuizModal({ quiz, onAnswer }) {
         <div style={{ fontSize: 11, color: opColor, marginBottom: 6, letterSpacing: 1 }}>
           🧮 퀴즈 타임!
         </div>
-        <div style={{ fontSize: 10, color: "#90A4AE", marginBottom: 20 }}>
+        <div style={{ fontSize: 10, color: "#90A4AE", marginBottom: 16 }}>
           5마리 포획 달성! 정답을 맞춰야 계속할 수 있어요
         </div>
 
         <div style={{
-          fontSize: 38, color: "white", fontWeight: "bold",
-          marginBottom: 20, letterSpacing: 4,
+          fontSize: 36, color: "white", fontWeight: "bold",
+          marginBottom: 16, letterSpacing: 4,
           textShadow: `0 0 20px ${opColor}88`,
         }}>
           {quiz.a} <span style={{ color: opColor }}>{quiz.op}</span> {quiz.b} = ?
         </div>
 
+        {/* 키보드 입력 */}
+        <input
+          type="number"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && submit()}
+          autoFocus
+          style={{
+            width: "100%", padding: "9px 0",
+            fontSize: 24, textAlign: "center",
+            background: "rgba(255,255,255,0.08)",
+            border: quiz.wrong ? "2px solid #FF5252" : `2px solid ${opColor}88`,
+            borderRadius: 8, color: "white",
+            outline: "none", marginBottom: 8,
+            fontFamily: "monospace", boxSizing: "border-box",
+          }}
+          placeholder="?"
+        />
+
         {quiz.wrong && (
           <div style={{
-            color: "#FF5252", fontSize: 11, marginBottom: 12,
+            color: "#FF5252", fontSize: 11, marginBottom: 8,
             animation: "pop 0.2s ease",
           }}>
             ❌ 틀렸어! 다시 해봐!
@@ -958,17 +1009,16 @@ function QuizModal({ quiz, onAnswer }) {
         )}
 
         {/* 4지선다 */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 0 }}>
           {quiz.choices.map(n => (
             <button key={n} onClick={() => onAnswer(n)} style={{
-              padding: "14px 0", fontSize: 22, fontWeight: "bold",
+              padding: "13px 0", fontSize: 20, fontWeight: "bold",
               background: quiz.wrong && n === quiz.answer
                 ? "rgba(105,240,174,0.18)" : "rgba(255,255,255,0.07)",
               border: quiz.wrong && n === quiz.answer
                 ? "2px solid #69F0AE" : "2px solid rgba(255,255,255,0.15)",
               borderRadius: 10, color: "#E8EAF6", cursor: "pointer",
-              fontFamily: "monospace",
-              transition: "background 0.15s",
+              fontFamily: "monospace", transition: "background 0.15s",
             }}>
               {n}
             </button>
