@@ -231,6 +231,7 @@ export default function WildCatch() {
     gameOver: false,
     goldenBall: false,
     paused: false,
+    dangerTimer: 0, // 시간 초과 탈출 후 10초 게임오버 카운트다운
   });
 
   const [ui, setUi] = useState({
@@ -878,6 +879,7 @@ export default function WildCatch() {
             // combo & miss reset
             s.combo++;
             s.missStreak = 0;
+            s.dangerTimer = 0; // 위기 해제
             if (s.combo > s.maxCombo) s.maxCombo = s.combo;
             if (s.combo % 5 === 0) {
               s.goldenBall = true;
@@ -1083,14 +1085,15 @@ export default function WildCatch() {
         if (s.phase === "playing" && s.monster && !s.ball.active) {
           s.monTimer--;
           if (s.monTimer <= 0) {
-            // 시간 초과 → 도망 처리 (miss 아님)
+            // 시간 초과 → 도망 처리 + 위기 카운트다운 시작
             s.combo = 0;
             const dir = s.monster.x < GW / 2 ? -1 : 1;
             s.monster.vx = dir * 9;
             s.monster.vy = -5;
             s.escapeAlpha = 1.0;
             s.phase = "escaping";
-            showMsg("⏰ 시간 초과! 도망갔다!", false);
+            s.dangerTimer = 600; // 10초 카운트다운
+            showMsg("⏰ 시간 초과! 10초 안에 잡아라!", false);
           }
         }
 
@@ -1110,6 +1113,24 @@ export default function WildCatch() {
           ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 16;
           ctx.fillText(`⏰ ${secs}`, GW / 2, 8);
           ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+        }
+        // ── danger timer (시간 초과 후 10초 카운트다운) ──
+        if (s.dangerTimer > 0) {
+          s.dangerTimer--;
+          if (s.dangerTimer <= 0) {
+            s.gameOver = true;
+            setGameOver(true);
+          } else {
+            const dsecs = Math.ceil(s.dangerTimer / 60);
+            const pulse = 0.65 + 0.35 * Math.sin(Date.now() * 0.02);
+            ctx.globalAlpha = pulse;
+            ctx.fillStyle = "#FF1744";
+            ctx.font = `bold ${dsecs <= 3 ? 22 : 18}px 'Noto Sans KR', monospace`;
+            ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+            ctx.shadowColor = "#FF1744"; ctx.shadowBlur = 20;
+            ctx.fillText(`⚠️ ${dsecs}초 안에 잡아라!`, GW / 2, GH - 8);
+            ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+          }
         }
         drawEffectHud();
         if (s.shake > 0) s.shake--;
@@ -1382,7 +1403,7 @@ export default function WildCatch() {
             s.item = null; s.effect = null;
             s.combo = 0; s.maxCombo = 0; s.specialCaught = 0;
             s.specialBanner = 0; s.missStreak = 0; s.gameOver = false;
-            s.goldenBall = false; s.monTimer = 900;
+            s.goldenBall = false; s.monTimer = 900; s.dangerTimer = 0;
             setGameOver(false);
             syncUi("새로운 모험 시작!", true);
           }} />
@@ -1419,7 +1440,7 @@ export default function WildCatch() {
 
       {/* Keyboard hint */}
       <div style={{ color: "#4A6080", fontSize: 7, marginTop: 6, textAlign: "center", lineHeight: 2.2, fontFamily: "'Noto Sans KR', monospace" }}>
-        ← → 이동  •  SPACE 던지기  •  10마리 포획마다 캐릭터 레벨업!
+        ← → 이동  •  SPACE 던지기  •  5마리마다 레벨업 (10구간은 10마리)
       </div>
 
       {/* Collection */}
@@ -1482,7 +1503,9 @@ function RulesModal({ onClose }) {
       items: [
         "몬스터는 15초 안에 잡아야 함",
         "5초 이하 남으면 화면 중앙에 카운트다운 표시",
-        "시간 초과 시 몬스터 도망 (게임오버 아님)",
+        "시간 초과 시 몬스터 도망 + ⚠️ 위기 발동!",
+        "위기 발동 후 10초 안에 다음 몬스터를 잡아야 함",
+        "10초 안에 못 잡으면 게임 오버!",
       ],
     },
     {
@@ -1492,6 +1515,7 @@ function RulesModal({ onClose }) {
         "Lv.1-9: 10번, Lv.10-19: 8번, Lv.20-29: 6번",
         "Lv.30-39: 5번, Lv.40-49: 3번, Lv.50: 1번 실패 시 종료",
         "몬스터 도망은 MISS 카운트 없음",
+        "시간 초과 후 10초 카운트다운 0이 되면 즉시 종료",
       ],
     },
     {
@@ -1500,6 +1524,15 @@ function RulesModal({ onClose }) {
         "연속 포획 성공마다 콤보 증가!",
         "5콤보 달성 시 🌟황금볼 지급 (확정 포획)",
         "실패하면 콤보 초기화",
+      ],
+    },
+    {
+      title: "🎒 캐릭터 레벨업",
+      items: [
+        "5마리 포획마다 캐릭터 레벨 1 상승",
+        "Lv.10 / 20 / 30 / 40 구간 돌파는 10마리 필요",
+        "레벨업 시 모자 모양·복장 색상 변화!",
+        "레벨 5단계마다 몬스터 속도 증가 (최대 2배)",
       ],
     },
     {
