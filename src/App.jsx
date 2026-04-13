@@ -153,18 +153,22 @@ const BALL_NAMES = [
 const XP_REQ = [4, 9, 16, 26, 40, 60, 88, 125, 175, Infinity];
 
 // 캐릭터 XP — 레벨별 필요 경험치 (index = charLvl-1, 총 49개)
-// Lv1-9: 35/레벨 (avg lv3 몬스터로 약 10마리), Lv10-19: 100, Lv20-29: 200, Lv30-39: 400, Lv40-49: 700
+// lv1 몬스터(1XP) 기준 포획 수: Lv1-10≈10마리, Lv10-20≈20마리(lv5 기준), Lv20-30≈43마리(lv7 기준), ...
 const CHAR_XP_REQ = [
-  35,35,35,35,35,35,35,35,35,           // lv1→2 ~ lv9→10
-  100,100,100,100,100,100,100,100,100,100, // lv10→11 ~ lv19→20
-  200,200,200,200,200,200,200,200,200,200, // lv20→21 ~ lv29→30
-  400,400,400,400,400,400,400,400,400,400, // lv30→31 ~ lv39→40
-  700,700,700,700,700,700,700,700,700,700, // lv40→41 ~ lv49→50
+  10,10,10,10,10,10,10,10,10,           // lv1→2 ~ lv9→10  (lv1 몬스터 약 10마리)
+  100,100,100,100,100,100,100,100,100,100, // lv10→11 ~ lv19→20 (lv5 몬스터 약 20마리)
+  300,300,300,300,300,300,300,300,300,300, // lv20→21 ~ lv29→30 (lv7 몬스터 약 43마리)
+  600,600,600,600,600,600,600,600,600,600, // lv30→31 ~ lv39→40 (lv8 몬스터 약 75마리)
+  900,900,900,900,900,900,900,900,900,900, // lv40→41 ~ lv49→50 (lv9 몬스터 약 100마리)
 ];
 
 // 캐릭터 레벨 10단계마다 볼 발사 속도 보너스 (+10%씩)
 function ballSpeedMult(charLvl) {
   return 1.0 + Math.floor(charLvl / 10) * 0.1; // lv10:1.1x, lv20:1.2x ... lv50:1.5x
+}
+// 볼 레벨 이펙트 단계마다 발사 속도 +5% (Lv1:1.0x ... Lv8+:1.35x)
+function ballLvlSpeedMult(ballLvl) {
+  return 1.0 + (Math.min(ballLvl, 8) - 1) * 0.05;
 }
 
 // 캐릭터 XP → 레벨 변환
@@ -592,40 +596,66 @@ export default function WildCatch() {
       const c = isGolden ? "#FFD700" : BALL_COLORS[s.ballLvl - 1];
       const blvl = s.ballLvl;
 
-      // level-based trail effects (Lv3+)
-      if (!isGolden && blvl >= 3 && s.ball.trail && s.ball.trail.length > 0) {
+      // ── 8-tier level effects ──
+      if (!isGolden && blvl >= 2 && s.ball.trail && s.ball.trail.length > 0) {
         s.ball.trail.forEach((pt, i) => {
           const ratio = i / s.ball.trail.length;
           if (blvl >= 8) {
-            // Lv8+: rainbow trail
-            ctx.globalAlpha = ratio * 0.55;
+            // Tier 8: rainbow trail
+            ctx.globalAlpha = ratio * 0.60;
             ctx.fillStyle = `hsl(${(Date.now() * 0.4 + i * 28) % 360},100%,65%)`;
-          } else if (blvl >= 5) {
-            // Lv5-7: colored glow trail
-            ctx.globalAlpha = ratio * 0.45;
+          } else if (blvl === 7) {
+            // Tier 7: double-layer trail (outer glow + inner color)
+            ctx.globalAlpha = ratio * 0.25;
+            ctx.fillStyle = "#fff";
+            ctx.beginPath(); ctx.arc(pt.x, pt.y, BALL_R * (0.35 + ratio * 0.65), 0, Math.PI * 2); ctx.fill();
+            ctx.globalAlpha = ratio * 0.50;
             ctx.fillStyle = c;
-          } else {
-            // Lv3-4: simple fade trail
+          } else if (blvl === 6) {
+            // Tier 6: pulsing glow trail
+            ctx.globalAlpha = ratio * 0.55;
+            ctx.fillStyle = c;
+            ctx.shadowColor = c; ctx.shadowBlur = 8;
+          } else if (blvl === 5) {
+            // Tier 5: bright colored trail
+            ctx.globalAlpha = ratio * 0.48;
+            ctx.fillStyle = c;
+          } else if (blvl === 4) {
+            // Tier 4: colored trail
+            ctx.globalAlpha = ratio * 0.38;
+            ctx.fillStyle = c;
+          } else if (blvl === 3) {
+            // Tier 3: fade trail (slightly colored)
             ctx.globalAlpha = ratio * 0.28;
             ctx.fillStyle = c;
+          } else {
+            // Tier 2 (Lv2): subtle white fade
+            ctx.globalAlpha = ratio * 0.18;
+            ctx.fillStyle = "#fff";
           }
-          const r = BALL_R * (0.25 + ratio * 0.55);
+          const r = BALL_R * (0.22 + ratio * 0.55);
           ctx.beginPath(); ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2); ctx.fill();
+          ctx.shadowBlur = 0;
         });
         ctx.globalAlpha = 1;
       }
 
-      // level sparkle particles (Lv6+)
-      if (!isGolden && blvl >= 6) {
-        const sparkCount = blvl >= 9 ? 5 : 3;
-        ctx.shadowColor = c; ctx.shadowBlur = blvl >= 9 ? 20 : 10;
+      // sparkle particles: Tier 5(Lv5)=3개, Tier 6(Lv6)=4개, Tier 7(Lv7)=5개, Tier 8(Lv8+)=6개+shadow
+      if (!isGolden && blvl >= 5) {
+        const sparkCount = blvl >= 8 ? 6 : blvl >= 7 ? 5 : blvl >= 6 ? 4 : 3;
+        ctx.shadowColor = c; ctx.shadowBlur = blvl >= 8 ? 22 : blvl >= 7 ? 14 : 8;
         for (let i = 0; i < sparkCount; i++) {
           const a = Date.now() * 0.007 + (i / sparkCount) * Math.PI * 2;
           const sr = BALL_R + 5 + Math.sin(Date.now() * 0.012 + i) * 2;
-          ctx.fillStyle = `rgba(255,255,255,${0.7 - i * 0.1})`;
+          ctx.fillStyle = blvl >= 8 ? `hsl(${(Date.now()*0.3+i*60)%360},100%,70%)` : `rgba(255,255,255,${0.75 - i * 0.08})`;
           ctx.beginPath(); ctx.arc(bx + Math.cos(a) * sr * 0.45, by + Math.sin(a) * sr * 0.45, 2, 0, Math.PI * 2); ctx.fill();
         }
         ctx.shadowBlur = 0;
+      }
+
+      // Lv2: soft glow only (no sparkle)
+      if (!isGolden && blvl === 2) {
+        ctx.shadowColor = c; ctx.shadowBlur = 6;
       }
 
       // golden outer sparkle + rainbow trail
@@ -1562,16 +1592,16 @@ export default function WildCatch() {
 
         if (s.ball.active) {
           const speedBoost = (s.effect && s.effect.type === "speed") ? 1.3 : 1.0;
-          s.ball.y -= 9 * ballSpeedMult(s.charLvl) * speedBoost;
-          // trail 업데이트 (황금볼 또는 Lv3+ 일반 볼)
+          s.ball.y -= 9 * ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl) * speedBoost;
+          // trail 업데이트 (황금볼 또는 Lv2+ 일반 볼)
           if (s.ball.golden) {
             if (!s.ball.rainbowTrail) s.ball.rainbowTrail = [];
             s.ball.rainbowTrail.unshift({ x: s.ball.x, y: s.ball.y });
             if (s.ball.rainbowTrail.length > 12) s.ball.rainbowTrail.pop();
-          } else if (s.ballLvl >= 3) {
+          } else if (s.ballLvl >= 2) {
             if (!s.ball.trail) s.ball.trail = [];
             s.ball.trail.unshift({ x: s.ball.x, y: s.ball.y });
-            const maxLen = 4 + (s.ballLvl - 3) * 2; // Lv3:4, Lv10:18
+            const maxLen = 2 + (s.ballLvl - 2) * 2; // Lv2:2, Lv3:4 ... Lv10:18
             if (s.ball.trail.length > maxLen) s.ball.trail.pop();
           }
           if (s.ball.y < -20) {
@@ -2281,21 +2311,25 @@ function RulesModal({ onClose }) {
       ],
     },
     {
-      title: "🎯 볼 레벨 이펙트",
+      title: "🎯 볼 레벨 이펙트 (8종)",
       items: [
-        "볼 레벨이 높을수록 던질 때 이펙트 강화!",
-        "Lv3+: 볼 궤적 trail 등장",
-        "Lv6+: 반짝이 스파크 추가",
-        "Lv8+: 무지개 레인보우 trail",
-        "포획 중 공이 도는 orbit도 레벨에 따라 변화",
+        "볼 레벨업마다 이펙트 강화 + 발사 속도 +5%!",
+        "Lv2: 흰색 페이드 trail · 소프트 글로우",
+        "Lv3: 컬러 페이드 trail",
+        "Lv4: 선명한 컬러 trail",
+        "Lv5: 밝은 trail + 스파크 3개",
+        "Lv6: 펄싱 글로우 trail + 스파크 4개",
+        "Lv7: 더블 레이어 trail + 스파크 5개",
+        "Lv8+: 무지개 trail + 레인보우 스파크 6개",
+        "포획 중 orbit도 볼 레벨에 따라 변화",
       ],
     },
     {
       title: "🎒 캐릭터 레벨업 (XP 방식)",
       items: [
         "몬스터 포획 시 몬스터 레벨만큼 XP 획득",
-        "Lv1-10: 35XP/레벨, Lv10-20: 100XP/레벨",
-        "Lv20-30: 200XP, Lv30-40: 400XP, Lv40-50: 700XP",
+        "Lv1-10: 10XP/레벨, Lv10-20: 100XP/레벨",
+        "Lv20-30: 300XP, Lv30-40: 600XP, Lv40-50: 900XP",
         "레벨업 시 모자 모양·복장 색상 변화!",
         "레벨 5단계마다 몬스터 속도 증가 (최대 2배)",
       ],
