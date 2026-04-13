@@ -1354,10 +1354,14 @@ export default function WildCatch() {
             if (spd > 4) { mon.vx = (mon.vx / spd) * 4; mon.vy = (mon.vy / spd) * 4; }
           }
 
-          // 도망 AI: Lv8+ 몬스터가 볼 날아오면 반대 방향으로
+          // 도망 AI: Lv8+ 몬스터가 볼이 120px 이내 근접 시에만 반응
           if (mon.level >= 8 && s.ball.active) {
             const dx = s.ball.x - mon.x;
-            mon.vx = Math.abs(mon.vx) * (dx > 0 ? -1 : 1);
+            const dy = s.ball.y - mon.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 120) {
+              mon.vx = Math.abs(mon.vx) * (dx > 0 ? -1 : 1);
+            }
           }
 
           if (mon.pattern === "sleepy") {
