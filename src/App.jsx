@@ -155,14 +155,14 @@ function catchRate(ballLvl, monLvl) {
   return Math.max(0.06, 0.88 - gap * 0.15);
 }
 
-// 캐릭터 레벨별 miss 허용 횟수 (Lv1-9:10, 10-19:8, 20-29:6, 30-39:5, 40-49:3, 50:1)
+// 캐릭터 레벨별 miss 허용 횟수 (Lv1-9:20, 10-19:18, 20-29:16, 30-39:14, 40-49:12, 50:10)
 function missLimit(charLvl) {
-  if (charLvl >= 50) return 1;
-  if (charLvl >= 40) return 3;
-  if (charLvl >= 30) return 5;
-  if (charLvl >= 20) return 6;
-  if (charLvl >= 10) return 8;
-  return 10;
+  if (charLvl >= 50) return 10;
+  if (charLvl >= 40) return 12;
+  if (charLvl >= 30) return 14;
+  if (charLvl >= 20) return 16;
+  if (charLvl >= 10) return 18;
+  return 20;
 }
 
 // 누적 포획수 → 캐릭터 레벨 변환
@@ -1359,7 +1359,7 @@ export default function WildCatch() {
             const dx = s.ball.x - mon.x;
             const dy = s.ball.y - mon.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 120) {
+            if (dist < 60) {
               mon.vx = Math.abs(mon.vx) * (dx > 0 ? -1 : 1);
             }
           }
@@ -1382,7 +1382,7 @@ export default function WildCatch() {
             mon.vy += 0.08; // gravity
           } else if (mon.pattern === "zigzag") {
             mon.zigzagTimer = (mon.zigzagTimer || 0) + 1;
-            if (mon.zigzagTimer % 55 === 0) mon.vx *= -1;
+            if (mon.zigzagTimer % 100 === 0) mon.vx *= -1;
             mon.x += mon.vx * slowFactor;
             mon.y += mon.vy * slowFactor;
           } else {
@@ -1851,8 +1851,8 @@ function RulesModal({ onClose }) {
       title: "💀 게임 오버",
       items: [
         "볼을 던졌는데 못 맞히면 MISS 카운트",
-        "Lv.1-9: 10번, Lv.10-19: 8번, Lv.20-29: 6번",
-        "Lv.30-39: 5번, Lv.40-49: 3번, Lv.50: 1번 실패 시 종료",
+        "Lv.1-9: 20번, Lv.10-19: 18번, Lv.20-29: 16번",
+        "Lv.30-39: 14번, Lv.40-49: 12번, Lv.50: 10번 실패 시 종료",
         "몬스터 도망은 MISS 카운트 없음",
         "시간 초과 후 10초 카운트다운 0이 되면 즉시 종료",
       ],
