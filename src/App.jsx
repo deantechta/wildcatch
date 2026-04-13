@@ -152,6 +152,32 @@ const BALL_NAMES = [
 // XP required to reach next ball level (index = ballLvl-1)
 const XP_REQ = [4, 9, 16, 26, 40, 60, 88, 125, 175, Infinity];
 
+// 캐릭터 XP — 레벨별 필요 경험치 (index = charLvl-1, 총 49개)
+// Lv1-9: 35/레벨 (avg lv3 몬스터로 약 10마리), Lv10-19: 100, Lv20-29: 200, Lv30-39: 400, Lv40-49: 700
+const CHAR_XP_REQ = [
+  35,35,35,35,35,35,35,35,35,           // lv1→2 ~ lv9→10
+  100,100,100,100,100,100,100,100,100,100, // lv10→11 ~ lv19→20
+  200,200,200,200,200,200,200,200,200,200, // lv20→21 ~ lv29→30
+  400,400,400,400,400,400,400,400,400,400, // lv30→31 ~ lv39→40
+  700,700,700,700,700,700,700,700,700,700, // lv40→41 ~ lv49→50
+];
+
+// 캐릭터 레벨 10단계마다 볼 발사 속도 보너스 (+10%씩)
+function ballSpeedMult(charLvl) {
+  return 1.0 + Math.floor(charLvl / 10) * 0.1; // lv10:1.1x, lv20:1.2x ... lv50:1.5x
+}
+
+// 캐릭터 XP → 레벨 변환
+function charLvlFromXp(xp) {
+  let lvl = 1, remaining = xp;
+  for (let i = 0; i < CHAR_XP_REQ.length && lvl < 50; i++) {
+    if (remaining < CHAR_XP_REQ[i]) break;
+    remaining -= CHAR_XP_REQ[i];
+    lvl++;
+  }
+  return lvl;
+}
+
 // Character appearance themes by level tier
 function getCharTheme(lvl) {
   if (lvl >= 50) return { body: "#FF8F00", legs: "#E65100", hat: "#BF360C", skin: "#FFE0B2", accent: "#FFD700" };
@@ -179,18 +205,7 @@ function missLimit(charLvl) {
   return 20;
 }
 
-// 누적 포획수 → 캐릭터 레벨 변환
-// 기본 10마리마다 레벨업, 10의 배수 레벨(10,20,30,40)은 20마리 필요
-function charLevelFromCatches(n) {
-  let level = 1, used = 0;
-  while (level < 50) {
-    const cost = (level % 10 === 0) ? 10 : 5;
-    if (used + cost > n) break;
-    used += cost;
-    level++;
-  }
-  return level;
-}
+// (구 charLevelFromCatches 제거 — CHAR_XP_REQ 기반 charLvlFromXp로 대체)
 
 function spawnMonster(ballLvl, charLvl = 1, special = false) {
   const min = Math.max(1, ballLvl - 1);
@@ -236,7 +251,7 @@ export default function WildCatch() {
     ball:   { x: 0, y: 0, active: false },
     monster: null,
     ballLvl: 1, xp: 0,
-    charLvl: 1, levelUpTimer: 0,
+    charLvl: 1, charXp: 0, levelUpTimer: 0,
     phase: "playing",   // playing | catching | escaping
     catchTimer: 0,
     keys: new Set(),
@@ -268,6 +283,7 @@ export default function WildCatch() {
     comboPopValue: 0,     // 팝업에 표시할 콤보 값
     goldenTime: false,    // 골든 타임 활성
     goldenTimeTimer: 0,   // 남은 프레임 (1800 = 30초)
+    bossCatchBanner: 0,   // 보스 포획 배너 타이머
   });
 
   const [ui, setUi] = useState({
@@ -798,6 +814,38 @@ export default function WildCatch() {
       s.specialBanner--;
     }
 
+    // ── boss catch banner ──
+    function drawBossCatchBanner() {
+      if (s.bossCatchBanner <= 0) return;
+      const alpha = Math.min(1, s.bossCatchBanner / 30) * Math.min(1, s.bossCatchBanner / 200);
+      const scale = 1.0 + 0.12 * Math.sin(Date.now() * 0.01);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      // dark overlay
+      ctx.fillStyle = "rgba(0,0,50,0.6)";
+      ctx.fillRect(0, GH / 2 - 70, GW, 140);
+      // rainbow glow
+      const gr = ctx.createRadialGradient(GW/2, GH/2, 5, GW/2, GH/2, 220);
+      gr.addColorStop(0, `hsla(${Date.now() * 0.3 % 360},100%,65%,0.4)`);
+      gr.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = gr;
+      ctx.fillRect(0, GH/2 - 70, GW, 140);
+      ctx.translate(GW/2, GH/2);
+      ctx.scale(scale, scale);
+      // main text
+      ctx.shadowColor = "#FFD700"; ctx.shadowBlur = 40;
+      ctx.fillStyle = "#FFD700";
+      ctx.font = "bold 32px 'Noto Sans KR', monospace";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("👑 보스 포켓몬 캐치! 👑", 0, -14);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#FFF";
+      ctx.font = "bold 15px 'Noto Sans KR', monospace";
+      ctx.fillText("최고야! 정말 대단해! 🎉", 0, 18);
+      ctx.restore();
+      s.bossCatchBanner--;
+    }
+
     // ── draw monster ──
     function drawMonster(mon, t, catching) {
       const bob = catching ? 0 : Math.sin(t * 0.0023 + mon.x * 0.02) * 5;
@@ -840,7 +888,7 @@ export default function WildCatch() {
         ctx.font = "bold 12px monospace";
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.shadowColor = "#FF5252"; ctx.shadowBlur = 10;
-        ctx.fillText(`HP ${"❤️".repeat(mon.hp)}`, mx, my - MON_R - 28);
+        ctx.fillText(`HP ${"❤️".repeat(mon.hp)}`, mx, my - 82);
         ctx.shadowBlur = 0;
       } else {
         ctx.font = "42px serif";
@@ -919,10 +967,10 @@ export default function WildCatch() {
       }
     }
 
-    // ── boss pixel art sprite (캐릭터별 개별 도트 디자인) ──
+    // ── boss pixel art sprite (캐릭터별 개별 도트 디자인, 3× 크기) ──
     function drawBossSprite(mon, mx, my, t) {
-      const sc = 3;
-      const pulse = 1 + 0.05 * Math.sin(t * 0.05);
+      const sc = 9; // 3× (기존 3 → 9)
+      const pulse = 1 + 0.04 * Math.sin(t * 0.04);
       ctx.save();
       ctx.translate(mx, my);
       ctx.scale(pulse, pulse);
@@ -1303,7 +1351,7 @@ export default function WildCatch() {
           const ok = s.ball.golden || Math.random() < rate;
           s.ball.active = false;
 
-          // 보스 첫 타 처리 (HP 2 → 1)
+          // 보스 타격 처리 (HP 3→2→1→0)
           if (ok && s.monster.boss && s.monster.hp > 1) {
             s.monster.hp--;
             s.phase = "playing";
@@ -1316,6 +1364,12 @@ export default function WildCatch() {
             spawnParticles(s.monster.x, s.monster.y, true);
             spawnMonsterParticles(s.monster);
             s.flashTimer = 8; // 화면 플래시
+            const wasBoss = s.monster.boss;
+            if (wasBoss) {
+              s.bossCatchBanner = 240; // 4초 배너
+              spawnLevelUpEffect(s.monster.x, s.monster.y);
+              spawnLevelUpEffect(s.monster.x, s.monster.y);
+            }
             const wasSpecial = s.monster.special;
             s.collection.push({ ...s.monster });
             s.totalCaught++;
@@ -1339,13 +1393,15 @@ export default function WildCatch() {
               s.specialCaught++;
               s.specialBanner = 200;
               spawnLevelUpEffect(s.monster.x, s.monster.y);
-              // 특별 몬스터 포획: 캐릭터 레벨 +5 보너스
-              s.charLvl = Math.min(50, s.charLvl + 5);
+              // 특별 몬스터 포획: XP 대량 보너스 (5레벨치)
+              s.charXp += CHAR_XP_REQ[Math.min(s.charLvl - 1, CHAR_XP_REQ.length - 1)] * 5;
+              s.charLvl = Math.min(50, charLvlFromXp(s.charXp));
               spawnLevelUpEffect(s.player.x, GROUND_Y - PLAYER_H);
             }
 
-            // Character level up check
-            const newCharLvl = charLevelFromCatches(s.totalCaught);
+            // Character XP & level up
+            s.charXp += s.monster.level;
+            const newCharLvl = charLvlFromXp(s.charXp);
             if (newCharLvl > s.charLvl) {
               s.charLvl = newCharLvl;
               spawnLevelUpEffect(s.player.x, GROUND_Y - PLAYER_H);
@@ -1397,7 +1453,7 @@ export default function WildCatch() {
           if (isBossSpawn) {
             const bd = BOSS_MONSTERS[Math.floor(Math.random() * BOSS_MONSTERS.length)];
             s.monster.boss = true;
-            s.monster.hp = 2;
+            s.monster.hp = 3;
             s.monster.level = 10;
             s.monster.rarity = "legend";
             s.monster.emoji = "👑";
@@ -1493,18 +1549,18 @@ export default function WildCatch() {
         if (s.effect) {
           s.effect.timer--;
           if (s.effect.timer <= 0) {
-            showMsg(s.effect.type === "speed" ? "⚡ 빠르게 종료!" : "🐌 느리게 종료!", false);
+            showMsg(s.effect.type === "speed" ? "⚡ 볼 가속 종료!" : "🐌 느리게 종료!", false);
             s.effect = null;
           }
         }
 
-        // ── player movement (speed boost if active) ──
-        const moveSpd = (s.effect && s.effect.type === "speed") ? 10 : 5;
-        if (s.keys.has("ArrowLeft"))  s.player.x = Math.max(22, s.player.x - moveSpd);
-        if (s.keys.has("ArrowRight")) s.player.x = Math.min(GW - 22, s.player.x + moveSpd);
+        // ── player movement (speed effect → 볼 속도 증가, 이동속도 기본값) ──
+        if (s.keys.has("ArrowLeft"))  s.player.x = Math.max(22, s.player.x - 5);
+        if (s.keys.has("ArrowRight")) s.player.x = Math.min(GW - 22, s.player.x + 5);
 
         if (s.ball.active) {
-          s.ball.y -= 9;
+          const speedBoost = (s.effect && s.effect.type === "speed") ? 1.3 : 1.0;
+          s.ball.y -= 9 * ballSpeedMult(s.charLvl) * speedBoost;
           // trail 업데이트 (황금볼 또는 Lv3+ 일반 볼)
           if (s.ball.golden) {
             if (!s.ball.rainbowTrail) s.ball.rainbowTrail = [];
@@ -1532,7 +1588,11 @@ export default function WildCatch() {
                 showMsg(`놓쳤다! (${s.missStreak}/${limit})`, false);
                 // 7번 연속 miss → 도움 아이템 자동 등장
                 if (s.missStreak >= 7 && !s.item) {
-                  const helpType = Math.random() < 0.5 ? "shield" : "autoCatch";
+                  // 확률: slow(30%)>speed(25%)>shield(20%)>autoCatch(15%)>magnet(7%)>timeplus(3%)
+                  const helpWeights = [0.30,0.25,0.20,0.15,0.07,0.03];
+                  const helpTypes   = ["slow","speed","shield","autoCatch","magnet","timeplus"];
+                  let hr = Math.random(), hc = 0, helpType = "shield";
+                  for (let i = 0; i < helpWeights.length; i++) { hc += helpWeights[i]; if (hr < hc) { helpType = helpTypes[i]; break; } }
                   s.item = {
                     type: helpType,
                     x: GW / 2 + (Math.random() > 0.5 ? 1 : -1) * (40 + Math.random() * 80),
@@ -1567,7 +1627,7 @@ export default function WildCatch() {
 
               if (type === "speed" || type === "slow" || type === "magnet") {
                 s.effect = { type, timer: 300 };
-                const effectMsg = { speed: "⚡ 빠르게 5초!", slow: "🐌 느리게 5초!", magnet: "🧲 자석! 5초간 몬스터가 다가온다!" };
+                const effectMsg = { speed: "⚡ 볼 발사 30% 빠르게! 5초!", slow: "🐌 느리게 5초!", magnet: "🧲 자석! 5초간 몬스터가 다가온다!" };
                 showMsg(effectMsg[type], true);
               } else if (type === "shield") {
                 s.shield = true;
@@ -1581,6 +1641,8 @@ export default function WildCatch() {
                   s.collection.push({ ...s.monster });
                   s.totalCaught++;
                   s.xp += s.monster.level * (s.goldenTime ? 2 : 1);
+                  s.charXp += s.monster.level;
+                  s.charLvl = Math.min(50, charLvlFromXp(s.charXp));
                   s.combo++;
                   s.missStreak = 0;
                   s.dangerTimer = 0;
@@ -1592,7 +1654,7 @@ export default function WildCatch() {
                   s.monster = spawnMonster(s.ballLvl, s.charLvl, isBoss2 ? false : isSpecial2);
                   if (isBoss2) {
                     const bd2 = BOSS_MONSTERS[Math.floor(Math.random() * BOSS_MONSTERS.length)];
-                    s.monster.boss = true; s.monster.hp = 2;
+                    s.monster.boss = true; s.monster.hp = 3;
                     s.monster.level = 10; s.monster.rarity = "legend";
                     s.monster.emoji = "👑"; s.monster.name = bd2.name;
                     s.monster.bossType = bd2.type;
@@ -1709,6 +1771,7 @@ export default function WildCatch() {
         drawParticles();
         drawComboPopup();
         drawSpecialBanner();
+        drawBossCatchBanner();
         // 5초 이하 카운트다운
         if (s.monTimer > 0 && s.monTimer <= 300 && s.phase === "playing") {
           const secs = Math.ceil(s.monTimer / 60);
@@ -2033,6 +2096,7 @@ export default function WildCatch() {
             s.goldenBall = false; s.monTimer = 900; s.dangerTimer = 0;
             s.shield = false; s.flashTimer = 0; s.comboPopTimer = 0; s.comboPopValue = 0;
             s.goldenTime = false; s.goldenTimeTimer = 0;
+            s.charXp = 0; s.bossCatchBanner = 0;
             setGameOver(false);
             syncUi("새로운 모험 시작!", true);
           }} />
@@ -2069,7 +2133,7 @@ export default function WildCatch() {
 
       {/* Keyboard hint */}
       <div className="hint-text" style={{ color: "#4A6080", fontSize: 7, marginTop: 6, textAlign: "center", lineHeight: 2.2, fontFamily: "'Noto Sans KR', monospace" }}>
-        ← → 이동  •  SPACE 던지기  •  5마리마다 레벨업 (10구간은 10마리)
+        ← → 이동  •  SPACE 던지기  •  몬스터 레벨이 높을수록 더 많은 XP 획득!
       </div>
 
       {/* Collection */}
@@ -2167,12 +2231,21 @@ function RulesModal({ onClose }) {
       ],
     },
     {
-      title: "🎒 캐릭터 레벨업",
+      title: "🎒 캐릭터 레벨업 (XP 방식)",
       items: [
-        "5마리 포획마다 캐릭터 레벨 1 상승",
-        "Lv.10 / 20 / 30 / 40 구간 돌파는 10마리 필요",
+        "몬스터 포획 시 몬스터 레벨만큼 XP 획득",
+        "Lv1-10: 35XP/레벨, Lv10-20: 100XP/레벨",
+        "Lv20-30: 200XP, Lv30-40: 400XP, Lv40-50: 700XP",
         "레벨업 시 모자 모양·복장 색상 변화!",
         "레벨 5단계마다 몬스터 속도 증가 (최대 2배)",
+      ],
+    },
+    {
+      title: "⚡ 볼 발사 속도 성장",
+      items: [
+        "캐릭터 Lv10마다 볼 발사 속도 +10% 자동 증가",
+        "Lv10: +10%, Lv20: +20%, ... Lv50: +50%",
+        "레벨이 높을수록 빠른 볼로 몬스터 포획 유리!",
       ],
     },
     {
@@ -2180,7 +2253,7 @@ function RulesModal({ onClose }) {
       items: [
         "10마리 포획마다 특별 몬스터 등장",
         "무지개 링 + 중앙 배너 이펙트",
-        "포획 성공 시 캐릭터 레벨 +5 즉시!",
+        "포획 성공 시 현재 레벨 5단계치 XP 대량 보너스!",
         "포획률 30% — 황금볼 사용 추천!",
       ],
     },
@@ -2188,7 +2261,7 @@ function RulesModal({ onClose }) {
       title: "🎁 아이템 (6종)",
       items: [
         "포획 성공 후 35% 확률로 6종 아이템 등장",
-        "⚡빠르게: 5초간 플레이어 이동속도 2배",
+        "⚡빠르게: 5초간 볼 발사 속도 30% 증가",
         "🐌느리게: 5초간 몬스터 속도 35%로 감소",
         "🧲자석: 5초간 몬스터가 플레이어 쪽으로 이동",
         "🛡️방패: 다음 볼 miss 1회 무효",
@@ -2212,8 +2285,9 @@ function RulesModal({ onClose }) {
       items: [
         "20마리 포획마다 특별 보스 등장!",
         "피카추·파이리·꼬부기 등 10종 도트 캐릭터",
-        "보스는 2번 맞춰야 포획됨 (HP ❤️❤️)",
-        "보스는 크기가 크고 속도도 더 빠름",
+        "보스는 3번 맞춰야 포획됨 (HP ❤️❤️❤️)",
+        "보스는 일반 몬스터의 3배 크기, 속도도 더 빠름",
+        "포획 성공 시 👑 보스 포켓몬 캐치! 배너 등장",
         "황금볼 + 뽑기권 활용 추천!",
       ],
     },
