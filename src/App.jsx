@@ -2035,8 +2035,19 @@ export default function WildCatch() {
         <StatBox label="콤보" value={`${ui.combo}콤보`} sub={`최고 ${ui.maxCombo}`} color="#FF80AB" />
         <div className="stat-divider" style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
         <StatBox label="특별" value={`🌟${ui.specialCaught}`} color="#FFD700" />
-        <div className="stat-divider" style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
-        <StatBox label="SCORE" value={ui.score.toLocaleString()} color="#00E5FF" />
+      </div>
+
+      {/* SCORE 표시 */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "center",
+        gap: 10, marginBottom: 8,
+        background: "rgba(0,229,255,0.07)", border: "1px solid #00E5FF44",
+        borderRadius: 10, padding: "6px 20px",
+      }}>
+        <span style={{ color: "#00E5FF", fontSize: 11, letterSpacing: 2, fontFamily: "monospace" }}>🏆 SCORE</span>
+        <span style={{ color: "#fff", fontSize: 20, fontWeight: "bold", fontFamily: "monospace", letterSpacing: 1 }}>
+          {ui.score.toLocaleString()}
+        </span>
       </div>
 
       {/* 버튼 행 */}
