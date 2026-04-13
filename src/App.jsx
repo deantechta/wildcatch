@@ -290,6 +290,7 @@ export default function WildCatch() {
     goldenTime: false,    // 골든 타임 활성
     goldenTimeTimer: 0,   // 남은 프레임 (1800 = 30초)
     bossCatchBanner: 0,   // 보스 포획 배너 타이머
+    totalScore: 0,        // 누적 획득 XP (점수)
   });
 
   const [ui, setUi] = useState({
@@ -298,7 +299,7 @@ export default function WildCatch() {
     collection: [], ballName: BALL_NAMES[0],
     catchPct: 88, charLvl: 1,
     combo: 0, maxCombo: 0, specialCaught: 0,
-    missStreak: 0, goldenBall: false,
+    missStreak: 0, goldenBall: false, score: 0,
   });
 
   const [gameOver, setGameOver] = useState(false);
@@ -326,7 +327,7 @@ export default function WildCatch() {
       collection: [...s.collection.slice(-30)],
       ballName: BALL_NAMES[s.ballLvl - 1],
       combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught,
-      goldenBall: s.goldenBall,
+      goldenBall: s.goldenBall, score: s.totalScore,
       catchPct: pct,
       charLvl: s.charLvl,
     });
@@ -341,7 +342,7 @@ export default function WildCatch() {
       const req = XP_REQ[s.ballLvl - 1] === Infinity ? 999 : XP_REQ[s.ballLvl - 1];
       const mon = s.monster;
       const pct = mon ? Math.round(catchRate(s.ballLvl, mon.level) * 100) : 0;
-      setUi(prev => ({ ...prev, message: "", xp: s.xp, xpReq: req, totalCaught: s.totalCaught, catchPct: pct, charLvl: s.charLvl, combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught, goldenBall: s.goldenBall }));
+      setUi(prev => ({ ...prev, message: "", xp: s.xp, xpReq: req, totalCaught: s.totalCaught, catchPct: pct, charLvl: s.charLvl, combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught, goldenBall: s.goldenBall, score: s.totalScore }));
     }, 2200);
   }
 
@@ -1384,12 +1385,12 @@ export default function WildCatch() {
           const ok = s.ball.golden || Math.random() < rate;
           s.ball.active = false;
 
-          // 보스 타격 처리 (HP 3→2→1→0)
+          // 보스 타격 처리 (HP 5→4→...→1→0)
           if (ok && s.monster.boss && s.monster.hp > 1) {
             s.monster.hp--;
             s.phase = "playing";
             spawnParticles(s.monster.x, s.monster.y, true);
-            showMsg("💥 보스에게 1타! 한 번 더!", true);
+            showMsg(`💥 보스 HP: ${"❤️".repeat(s.monster.hp)} 남았다!`, true);
             s.raf = requestAnimationFrame(loop); return;
           }
 
@@ -1422,18 +1423,25 @@ export default function WildCatch() {
               showMsg(`🏆 ${s.combo}콤보! 황금볼 획득!`, true);
             }
 
-            if (wasSpecial) {
+            if (wasBoss) {
+              // 보스 포획: lv10 몬스터 3배 = 30 XP (일반 +level 10은 아래서 추가)
+              s.charXp += 20; // 총 30XP (10은 아래 s.monster.level에서)
+              s.totalScore += 20;
+            } else if (wasSpecial) {
               s.specialCaught++;
               s.specialBanner = 200;
               spawnLevelUpEffect(s.monster.x, s.monster.y);
               // 특별 몬스터 포획: XP 대량 보너스 (5레벨치)
-              s.charXp += CHAR_XP_REQ[Math.min(s.charLvl - 1, CHAR_XP_REQ.length - 1)] * 5;
+              const specialBonus = CHAR_XP_REQ[Math.min(s.charLvl - 1, CHAR_XP_REQ.length - 1)] * 5;
+              s.charXp += specialBonus;
+              s.totalScore += specialBonus;
               s.charLvl = Math.min(50, charLvlFromXp(s.charXp));
               spawnLevelUpEffect(s.player.x, GROUND_Y - PLAYER_H);
             }
 
             // Character XP & level up
             s.charXp += s.monster.level;
+            s.totalScore += s.monster.level;
             const newCharLvl = charLvlFromXp(s.charXp);
             if (newCharLvl > s.charLvl) {
               s.charLvl = newCharLvl;
@@ -1476,24 +1484,24 @@ export default function WildCatch() {
             s.raf = requestAnimationFrame(loop); return;
           }
 
-          // special monster every 10 catches
-          const isSpecialSpawn = s.totalCaught > 0 && s.totalCaught % 10 === 0;
-          // boss every 20 catches (overrides special)
-          const isBossSpawn = s.totalCaught > 0 && s.totalCaught % 20 === 0;
+          // boss every 10 catches (overrides special)
+          const isBossSpawn = s.totalCaught >= 10 && s.totalCaught % 10 === 0;
+          // special monster every 5 catches (only if not boss)
+          const isSpecialSpawn = !isBossSpawn && s.totalCaught > 0 && s.totalCaught % 5 === 0;
           s.phase = "playing";
           s.monster = spawnMonster(s.ballLvl, s.charLvl, isBossSpawn ? false : isSpecialSpawn, s.difficulty || "hard");
           s.monTimer = 900;
           if (isBossSpawn) {
             const bd = BOSS_MONSTERS[Math.floor(Math.random() * BOSS_MONSTERS.length)];
             s.monster.boss = true;
-            s.monster.hp = 3;
+            s.monster.hp = 5;
             s.monster.level = 10;
             s.monster.rarity = "legend";
             s.monster.emoji = "👑";
             s.monster.name = bd.name;
             s.monster.bossType = bd.type;
             if (s.difficulty !== "easy") { s.monster.vx *= 1.5; s.monster.vy *= 1.5; }
-            showMsg(`👑 ${bd.name} 등장!! 2번 맞춰야 잡힌다!`, false);
+            showMsg(`👑 ${bd.name} 등장!! 5번 맞춰야 잡힌다!`, false);
           } else if (isSpecialSpawn) {
             showMsg("🌟 특별 몬스터 등장!", true);
           }
@@ -1674,6 +1682,7 @@ export default function WildCatch() {
                   s.totalCaught++;
                   s.xp += s.monster.level * (s.goldenTime ? 2 : 1);
                   s.charXp += s.monster.level;
+                  s.totalScore += s.monster.level;
                   s.charLvl = Math.min(50, charLvlFromXp(s.charXp));
                   s.combo++;
                   s.missStreak = 0;
@@ -1681,12 +1690,12 @@ export default function WildCatch() {
                   if (s.combo > s.maxCombo) s.maxCombo = s.combo;
                   spawnLevelUpEffect(s.monster.x, s.monster.y);
                   showMsg(`🎫 뽑기권! ${s.monster.name} 자동 포획!`, true);
-                  const isSpecial2 = s.totalCaught > 0 && s.totalCaught % 10 === 0;
-                  const isBoss2 = s.totalCaught > 0 && s.totalCaught % 20 === 0;
+                  const isBoss2 = s.totalCaught >= 10 && s.totalCaught % 10 === 0;
+                  const isSpecial2 = !isBoss2 && s.totalCaught > 0 && s.totalCaught % 5 === 0;
                   s.monster = spawnMonster(s.ballLvl, s.charLvl, isBoss2 ? false : isSpecial2, s.difficulty || "hard");
                   if (isBoss2) {
                     const bd2 = BOSS_MONSTERS[Math.floor(Math.random() * BOSS_MONSTERS.length)];
-                    s.monster.boss = true; s.monster.hp = 3;
+                    s.monster.boss = true; s.monster.hp = 5;
                     s.monster.level = 10; s.monster.rarity = "legend";
                     s.monster.emoji = "👑"; s.monster.name = bd2.name;
                     s.monster.bossType = bd2.type;
@@ -1786,15 +1795,21 @@ export default function WildCatch() {
         if (s.phase === "playing" && s.monster && !s.ball.active) {
           s.monTimer--;
           if (s.monTimer <= 0) {
-            // 시간 초과 → 도망 처리 + 위기 카운트다운 시작
-            s.combo = 0;
-            const dir = s.monster.x < GW / 2 ? -1 : 1;
-            s.monster.vx = dir * 9;
-            s.monster.vy = -5;
-            s.escapeAlpha = 1.0;
-            s.phase = "escaping";
-            s.dangerTimer = 600; // 10초 카운트다운
-            showMsg("⏰ 시간 초과! 10초 안에 잡아라!", false);
+            if (s.monster.boss) {
+              // 보스는 도망치지 않음 — 타이머만 리셋
+              s.monTimer = 900;
+              showMsg("👑 보스는 도망치지 않는다!", false);
+            } else {
+              // 시간 초과 → 도망 처리 + 위기 카운트다운 시작
+              s.combo = 0;
+              const dir = s.monster.x < GW / 2 ? -1 : 1;
+              s.monster.vx = dir * 9;
+              s.monster.vy = -5;
+              s.escapeAlpha = 1.0;
+              s.phase = "escaping";
+              s.dangerTimer = 600; // 10초 카운트다운
+              showMsg("⏰ 시간 초과! 10초 안에 잡아라!", false);
+            }
           }
         }
 
@@ -2020,6 +2035,8 @@ export default function WildCatch() {
         <StatBox label="콤보" value={`${ui.combo}콤보`} sub={`최고 ${ui.maxCombo}`} color="#FF80AB" />
         <div className="stat-divider" style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
         <StatBox label="특별" value={`🌟${ui.specialCaught}`} color="#FFD700" />
+        <div className="stat-divider" style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
+        <StatBox label="SCORE" value={ui.score.toLocaleString()} color="#00E5FF" />
       </div>
 
       {/* 버튼 행 */}
@@ -2130,7 +2147,7 @@ export default function WildCatch() {
             s.shield = false; s.flashTimer = 0; s.comboPopTimer = 0; s.comboPopValue = 0;
             s.goldenTime = false; s.goldenTimeTimer = 0;
             s.charXp = 0; s.bossCatchBanner = 0;
-            s.difficulty = null; s.paused = true;
+            s.difficulty = null; s.paused = true; s.totalScore = 0;
             setGameOver(false);
             setDifficulty(null);
             setPlayTime(0);
@@ -2377,10 +2394,11 @@ function RulesModal({ onClose }) {
     {
       title: "💀 보스 몬스터",
       items: [
-        "20마리 포획마다 특별 보스 등장!",
+        "10마리 포획마다 보스 등장! (도망치지 않음)",
         "피카추·파이리·꼬부기 등 10종 도트 캐릭터",
-        "보스는 3번 맞춰야 포획됨 (HP ❤️❤️❤️)",
+        "보스는 5번 맞춰야 포획됨 (HP ❤️❤️❤️❤️❤️)",
         "보스는 일반 몬스터의 3배 크기, 속도도 더 빠름",
+        "포획 시 XP 30 획득 (lv10 몬스터의 3배)",
         "포획 성공 시 👑 보스 포켓몬 캐치! 배너 등장",
         "황금볼 + 뽑기권 활용 추천!",
       ],
@@ -2488,6 +2506,7 @@ function GameOverModal({ ui, playTime, onRestart }) {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 18 }}>
           {[
+            { label: "🏆 SCORE",    value: ui.score.toLocaleString(), color: "#00E5FF" },
             { label: "총 포획수",   value: `${ui.totalCaught}마리`, color: "#FFD740" },
             { label: "최고 콤보",   value: `${ui.maxCombo}콤보`,   color: "#FF80AB" },
             { label: "최고 레벨",   value: `Lv.${ui.charLvl}`,    color: "#78B7FF" },
@@ -2521,6 +2540,7 @@ function ResultModal({ ui, playTime, onClose }) {
   const fmt = s => `${String(Math.floor(s/3600)).padStart(2,"0")}:${String(Math.floor((s%3600)/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
   const stars = ui.totalCaught >= 30 ? 3 : ui.totalCaught >= 15 ? 2 : ui.totalCaught >= 5 ? 1 : 0;
   const rows = [
+    { label: "🏆 SCORE",       value: ui.score.toLocaleString(),     color: "#00E5FF" },
     { label: "총 포획수",      value: `${ui.totalCaught}마리`,       color: "#FFD740" },
     { label: "최고 콤보",      value: `${ui.maxCombo}콤보`,          color: "#FF80AB" },
     { label: "특별 몬스터",    value: `${ui.specialCaught}마리`,     color: "#FFD700" },
