@@ -120,18 +120,18 @@ const MONSTERS = [
   { level: 10, emoji: "🪄", name: "마법사",   rarity: "legend" },
 ];
 
-// ── Boss Monster Definitions ──────────────────────────────
+// ── Boss Monster Definitions (이름만 — 픽셀아트는 drawBossSprite에서 개별 구현) ──
 const BOSS_MONSTERS = [
-  { name: "피카추",   color1: "#FFE135", color2: "#FF8C00", accent: "#B22222", type: "electric" },
-  { name: "라이추",   color1: "#FF8C00", color2: "#8B0000", accent: "#FFA500", type: "electric" },
-  { name: "파이리",   color1: "#FF6347", color2: "#FF4500", accent: "#FFD700", type: "fire" },
-  { name: "꼬부기",   color1: "#4169E1", color2: "#1E3A8A", accent: "#87CEEB", type: "water" },
-  { name: "거북왕",   color1: "#2F855A", color2: "#1A4731", accent: "#63B3ED", type: "water" },
-  { name: "팬텀",     color1: "#6B46C1", color2: "#2D3748", accent: "#E9D8FD", type: "ghost" },
-  { name: "이상해씨", color1: "#38A169", color2: "#276749", accent: "#FC8181", type: "grass" },
-  { name: "리자몽",   color1: "#E53E3E", color2: "#C05621", accent: "#68D391", type: "fire" },
-  { name: "잠만보",   color1: "#F6E05E", color2: "#D69E2E", accent: "#FBB6CE", type: "normal" },
-  { name: "메타몽",   color1: "#805AD5", color2: "#553C9A", accent: "#E9D8FD", type: "normal" },
+  { name: "피카추" },
+  { name: "라이추" },
+  { name: "파이리" },
+  { name: "꼬부기" },
+  { name: "거북왕" },
+  { name: "팬텀" },
+  { name: "이상해씨" },
+  { name: "리자몽" },
+  { name: "잠만보" },
+  { name: "메타몽" },
 ];
 
 const RARITY_COLOR = {
@@ -919,141 +919,198 @@ export default function WildCatch() {
       }
     }
 
-    // ── boss pixel art sprite ──
+    // ── boss pixel art sprite (캐릭터별 개별 도트 디자인) ──
     function drawBossSprite(mon, mx, my, t) {
-      const bdef = BOSS_MONSTERS.find(b => b.name === mon.name) || BOSS_MONSTERS[0];
-      const c1 = bdef.color1, c2 = bdef.color2, ca = bdef.accent;
-      const sc = 3; // pixel scale
-      const pulse = 1 + 0.06 * Math.sin(t * 0.05);
+      const sc = 3;
+      const pulse = 1 + 0.05 * Math.sin(t * 0.05);
       ctx.save();
       ctx.translate(mx, my);
       ctx.scale(pulse, pulse);
 
-      // Draw helper: px grid (0,0 = center)
-      const px = (gx, gy, col) => {
+      // draw helper: gx/gy grid, center=(4,6)
+      const p = (gx, gy, col) => {
         ctx.fillStyle = col;
         ctx.fillRect((gx - 4) * sc, (gy - 6) * sc, sc, sc);
       };
+      const B = '#111', W = '#FFF';
+      const n = mon.name;
 
-      const type = bdef.type;
+      if (n === "피카추") {
+        // 노란 몸, 검은 귀끝, 빨간 볼
+        const Y='#FFE135', R='#E8323A', D='#7A4500';
+        // ears: black tips
+        p(2,0,B);p(5,0,B);
+        p(1,1,B);p(2,1,Y);p(5,1,Y);p(6,1,B);
+        p(1,2,Y);p(2,2,Y);p(5,2,Y);p(6,2,Y);
+        // head
+        p(1,3,Y);p(2,3,Y);p(3,3,Y);p(4,3,Y);p(5,3,Y);p(6,3,Y);
+        p(0,4,Y);p(1,4,B);p(2,4,Y);p(3,4,D);p(4,4,D);p(5,4,Y);p(6,4,B);p(7,4,Y);
+        // red cheeks
+        p(0,5,Y);p(1,5,Y);p(2,5,R);p(3,5,Y);p(4,5,Y);p(5,5,R);p(6,5,Y);p(7,5,Y);
+        // body
+        p(1,6,Y);p(2,6,Y);p(3,6,Y);p(4,6,Y);p(5,6,Y);p(6,6,Y);
+        p(2,7,Y);p(3,7,Y);p(4,7,Y);p(5,7,Y);
+        // lightning tail
+        p(8,3,D);p(8,4,D);p(7,5,D);p(7,6,D);p(8,7,D);
 
-      if (type === "electric") {
-        // Pikachu/Raichu style: round yellow body
-        const dots = [
-          // ears
-          [3,0,c2],[4,0,c2],[3,1,c2],[4,1,c2],
-          [3,2,c1],[4,2,c1],
-          // head
-          [2,2,c1],[5,2,c1],[1,3,c1],[2,3,c1],[3,3,c1],[4,3,c1],[5,3,c1],[6,3,c1],
-          [1,4,c1],[2,4,ca],[3,4,c1],[4,4,c1],[5,4,ca],[6,4,c1],
-          [1,5,c1],[2,5,c1],[3,5,c1],[4,5,c1],[5,5,c1],[6,5,c1],
-          // eyes
-          [2,3,"#111"],[5,3,"#111"],
-          // body
-          [1,6,c1],[2,6,c1],[3,6,c1],[4,6,c1],[5,6,c1],[6,6,c1],
-          [2,7,c2],[3,7,c2],[4,7,c2],[5,7,c2],
-          [2,8,c2],[3,8,c2],[4,8,c2],[5,8,c2],
-          // tail zigzag
-          [7,5,c2],[8,4,c2],[7,3,c2],[8,2,ca],
-        ];
-        dots.forEach(([gx,gy,col]) => px(gx,gy,col));
-      } else if (type === "fire") {
-        // Charmander/Charizard style: orange body with flame
-        const dots = [
-          // head
-          [2,1,c1],[3,1,c1],[4,1,c1],[5,1,c1],
-          [1,2,c1],[2,2,c1],[3,2,c1],[4,2,c1],[5,2,c1],[6,2,c1],
-          [1,3,c1],[2,3,c1],[3,3,c1],[4,3,c1],[5,3,c1],[6,3,c1],
-          // eyes
-          [2,2,"#111"],[5,2,"#111"],
-          // body
-          [2,4,c1],[3,4,c1],[4,4,c1],[5,4,c1],
-          [1,5,c1],[2,5,c1],[3,5,c1],[4,5,c1],[5,5,c1],[6,5,c1],
-          [2,6,c2],[3,6,c2],[4,6,c2],[5,6,c2],
-          // belly
-          [3,4,"#FFDEAD"],[4,4,"#FFDEAD"],[3,5,"#FFDEAD"],[4,5,"#FFDEAD"],
-          // tail flame
-          [7,6,c1],[7,5,ca],[8,4,ca],[7,3,"#FF0"],[8,3,"#FFA"],
-        ];
-        dots.forEach(([gx,gy,col]) => px(gx,gy,col));
-      } else if (type === "water") {
-        // Squirtle/Blastoise style: blue shell
-        const dots = [
-          // head
-          [2,1,c1],[3,1,c1],[4,1,c1],[5,1,c1],
-          [1,2,c1],[2,2,c1],[3,2,c1],[4,2,c1],[5,2,c1],[6,2,c1],
-          [1,3,c1],[2,3,c1],[3,3,c1],[4,3,c1],[5,3,c1],[6,3,c1],
-          // eyes
-          [2,2,"#111"],[5,2,"#111"],
-          // shell
-          [1,4,c2],[2,4,c2],[3,4,c2],[4,4,c2],[5,4,c2],[6,4,c2],
-          [1,5,c2],[2,5,ca],[3,5,ca],[4,5,ca],[5,5,ca],[6,5,c2],
-          [1,6,c2],[2,6,c2],[3,6,c2],[4,6,c2],[5,6,c2],[6,6,c2],
-          // cannons
-          [0,4,c2],[7,4,c2],
-        ];
-        dots.forEach(([gx,gy,col]) => px(gx,gy,col));
-      } else if (type === "ghost") {
-        // Phantom style: purple ghost
-        const dots = [
-          // body top (rounded)
-          [3,1,c1],[4,1,c1],[5,1,c1],
-          [2,2,c1],[3,2,c1],[4,2,c1],[5,2,c1],[6,2,c1],
-          [2,3,c1],[3,3,c1],[4,3,c1],[5,3,c1],[6,3,c1],
-          [2,4,c1],[3,4,c1],[4,4,c1],[5,4,c1],[6,4,c1],
-          [2,5,c1],[3,5,c1],[4,5,c1],[5,5,c1],[6,5,c1],
-          // eyes
-          [3,3,ca],[5,3,ca],[3,4,ca],[5,4,ca],
-          // bottom jagged
-          [2,6,c1],[3,6,c2],[4,6,c1],[5,6,c2],[6,6,c1],
-          // glow
-          [3,2,"rgba(233,216,253,0.4)"],[4,2,"rgba(233,216,253,0.4)"],
-        ];
-        dots.forEach(([gx,gy,col]) => px(gx,gy,col));
-      } else if (type === "grass") {
-        // Bulbasaur style: green with bulb
-        const dots = [
-          // head
-          [2,2,c1],[3,2,c1],[4,2,c1],[5,2,c1],
-          [1,3,c1],[2,3,c1],[3,3,c1],[4,3,c1],[5,3,c1],[6,3,c1],
-          [1,4,c1],[2,4,c1],[3,4,c1],[4,4,c1],[5,4,c1],[6,4,c1],
-          // eyes
-          [2,3,"#111"],[5,3,"#111"],
-          // body
-          [2,5,c1],[3,5,c1],[4,5,c1],[5,5,c1],
-          [2,6,c2],[3,6,c2],[4,6,c2],[5,6,c2],
-          // bulb on back
-          [3,1,c2],[4,1,c2],[5,1,c2],[3,0,ca],[4,0,ca],
-        ];
-        dots.forEach(([gx,gy,col]) => px(gx,gy,col));
-      } else {
-        // Normal (Snorlax/Ditto): round chunky
-        const dots = [
-          [2,1,c1],[3,1,c1],[4,1,c1],[5,1,c1],
-          [1,2,c1],[2,2,c1],[3,2,c1],[4,2,c1],[5,2,c1],[6,2,c1],
-          [1,3,c1],[2,3,c1],[3,3,c1],[4,3,c1],[5,3,c1],[6,3,c1],
-          [1,4,c1],[2,4,c1],[3,4,c1],[4,4,c1],[5,4,c1],[6,4,c1],
-          [1,5,c1],[2,5,c1],[3,5,c1],[4,5,c1],[5,5,c1],[6,5,c1],
-          [2,6,c1],[3,6,c1],[4,6,c1],[5,6,c1],
-          // belly / features
-          [2,3,"#fff"],[5,3,"#fff"],
-          [2,4,c2],[3,4,c2],[4,4,c2],[5,4,c2],
-          // eyes
-          [2,2,"#111"],[5,2,"#111"],
-        ];
-        dots.forEach(([gx,gy,col]) => px(gx,gy,col));
+      } else if (n === "라이추") {
+        // 진한 주황, 길고 가는 귀, 크림 볼
+        const O='#FF8C00', C='#FAEBD7', D='#3D2000';
+        // long thin dark ears
+        p(1,0,D);p(6,0,D);
+        p(1,1,O);p(6,1,O);
+        p(1,2,O);p(2,2,O);p(5,2,O);p(6,2,O);
+        // head
+        p(1,3,O);p(2,3,O);p(3,3,O);p(4,3,O);p(5,3,O);p(6,3,O);
+        p(0,4,O);p(1,4,B);p(2,4,O);p(3,4,O);p(4,4,O);p(5,4,O);p(6,4,B);p(7,4,O);
+        // cream cheeks (larger than pikachu)
+        p(0,5,O);p(1,5,C);p(2,5,C);p(3,5,O);p(4,5,O);p(5,5,C);p(6,5,C);p(7,5,O);
+        // body
+        p(1,6,O);p(2,6,C);p(3,6,C);p(4,6,C);p(5,6,C);p(6,6,O);
+        p(2,7,O);p(3,7,O);p(4,7,O);p(5,7,O);
+        // long curly tail
+        p(8,3,D);p(8,4,D);p(8,5,D);p(7,6,D);p(7,7,D);p(8,8,D);
+
+      } else if (n === "파이리") {
+        // 주황 몸, 크림 배, 꼬리 불꽃
+        const O='#FF6038', C='#FFDEAD', F='#FF2200', Y2='#FFD700';
+        // head
+        p(2,1,O);p(3,1,O);p(4,1,O);p(5,1,O);
+        p(1,2,O);p(2,2,O);p(3,2,O);p(4,2,O);p(5,2,O);p(6,2,O);
+        p(0,3,O);p(1,3,B);p(2,3,O);p(3,3,O);p(4,3,O);p(5,3,O);p(6,3,B);p(7,3,O);
+        p(0,4,O);p(1,4,O);p(2,4,O);p(3,4,O);p(4,4,O);p(5,4,O);p(6,4,O);p(7,4,O);
+        // cream belly
+        p(1,5,O);p(2,5,C);p(3,5,C);p(4,5,C);p(5,5,C);p(6,5,O);
+        p(1,6,O);p(2,6,C);p(3,6,C);p(4,6,C);p(5,6,C);p(6,6,O);
+        p(2,7,O);p(3,7,O);p(4,7,O);p(5,7,O);
+        // tail with flame tip
+        p(7,6,O);p(7,7,F);p(8,6,F);p(8,5,Y2);
+
+      } else if (n === "꼬부기") {
+        // 파란 몸, 거북이 등껍데기 패턴
+        const L='#5B8DD9', S='#8B7355', C='#E8F8E8', G='#4A7A42';
+        // head
+        p(2,1,L);p(3,1,L);p(4,1,L);p(5,1,L);
+        p(1,2,L);p(2,2,L);p(3,2,L);p(4,2,L);p(5,2,L);p(6,2,L);
+        p(0,3,L);p(1,3,B);p(2,3,L);p(3,3,L);p(4,3,L);p(5,3,L);p(6,3,B);p(7,3,L);
+        // white highlight in eyes
+        p(0,4,L);p(1,4,L);p(2,4,C);p(3,4,L);p(4,4,L);p(5,4,C);p(6,4,L);p(7,4,L);
+        // shell with grid pattern
+        p(0,5,S);p(1,5,S);p(2,5,S);p(3,5,S);p(4,5,S);p(5,5,S);p(6,5,S);p(7,5,S);
+        p(0,6,S);p(1,6,G);p(2,6,S);p(3,6,G);p(4,6,G);p(5,6,S);p(6,6,G);p(7,6,S);
+        p(0,7,S);p(1,7,S);p(2,7,S);p(3,7,S);p(4,7,S);p(5,7,S);p(6,7,S);p(7,7,S);
+        // feet
+        p(1,8,L);p(2,8,L);p(5,8,L);p(6,8,L);
+
+      } else if (n === "거북왕") {
+        // 진한 파란색, 등에 대포 2개
+        const L='#2C7BB6', S='#8B6914', G='#2D7A45', C='#A8D8EA';
+        // head
+        p(2,1,L);p(3,1,L);p(4,1,L);p(5,1,L);
+        p(1,2,L);p(2,2,L);p(3,2,L);p(4,2,L);p(5,2,L);p(6,2,L);
+        p(0,3,L);p(1,3,B);p(2,3,L);p(3,3,L);p(4,3,L);p(5,3,L);p(6,3,B);p(7,3,L);
+        // side cannons (distinctive feature!)
+        p(-1,3,G);p(-1,4,G);p(-1,5,G);
+        p(8,3,G);p(8,4,G);p(8,5,G);
+        // body/shell
+        p(0,4,S);p(1,4,S);p(2,4,S);p(3,4,S);p(4,4,S);p(5,4,S);p(6,4,S);p(7,4,S);
+        p(0,5,S);p(1,5,G);p(2,5,S);p(3,5,G);p(4,5,G);p(5,5,S);p(6,5,G);p(7,5,S);
+        p(0,6,S);p(1,6,S);p(2,6,S);p(3,6,S);p(4,6,S);p(5,6,S);p(6,6,S);p(7,6,S);
+        p(1,7,L);p(2,7,L);p(5,7,L);p(6,7,L);
+
+      } else if (n === "팬텀") {
+        // 보라 유령, 넓은 빨간 눈, 들쭉날쭉 밑면
+        const P='#7B4DA0', D='#180828', R='#FF2020';
+        // ghost body
+        p(2,0,P);p(3,0,P);p(4,0,P);p(5,0,P);
+        p(1,1,P);p(2,1,P);p(3,1,P);p(4,1,P);p(5,1,P);p(6,1,P);
+        p(1,2,P);p(2,2,P);p(3,2,P);p(4,2,P);p(5,2,P);p(6,2,P);
+        // red eyes (wide)
+        p(1,3,R);p(2,3,R);p(3,3,R);
+        p(4,3,R);p(5,3,R);p(6,3,R);
+        p(1,4,P);p(2,4,D);p(3,4,P);p(4,4,P);p(5,4,D);p(6,4,P);
+        p(1,5,P);p(2,5,P);p(3,5,P);p(4,5,P);p(5,5,P);p(6,5,P);
+        // grin (white teeth)
+        p(2,6,W);p(3,6,D);p(4,6,D);p(5,6,W);
+        // jagged bottom
+        p(1,7,P);p(2,7,D);p(3,7,P);p(4,7,D);p(5,7,P);p(6,7,D);
+
+      } else if (n === "이상해씨") {
+        // 청록 몸, 등에 구근(씨앗)
+        const G='#6CC5A0', D='#2E7D52', S='#7EC850', R='#E05050';
+        // bulb (씨앗) on back — distinctive!
+        p(3,0,S);p(4,0,S);p(5,0,S);
+        p(2,1,D);p(3,1,R);p(4,1,S);p(5,1,R);p(6,1,D);
+        // body
+        p(1,2,G);p(2,2,G);p(3,2,G);p(4,2,G);p(5,2,G);p(6,2,G);
+        p(0,3,G);p(1,3,G);p(2,3,G);p(3,3,G);p(4,3,G);p(5,3,G);p(6,3,G);p(7,3,G);
+        p(0,4,G);p(1,4,B);p(2,4,G);p(3,4,G);p(4,4,G);p(5,4,G);p(6,4,B);p(7,4,G);
+        p(0,5,G);p(1,5,G);p(2,5,G);p(3,5,G);p(4,5,G);p(5,5,G);p(6,5,G);p(7,5,G);
+        // dark spots on body
+        p(1,3,D);p(6,3,D);
+        p(2,6,G);p(3,6,G);p(4,6,G);p(5,6,G);
+
+      } else if (n === "리자몽") {
+        // 주황 몸, 파란 날개, 파란 배, 꼬리 불꽃
+        const O='#FF5722', BL='#26C6DA', Y2='#FDD835', R='#FF1744';
+        // wings (blue, distinctive!)
+        p(-1,2,BL);p(-1,3,BL);p(-1,4,BL);
+        p(8,2,BL);p(8,3,BL);p(8,4,BL);
+        // head
+        p(2,1,O);p(3,1,O);p(4,1,O);p(5,1,O);
+        p(1,2,O);p(2,2,O);p(3,2,O);p(4,2,O);p(5,2,O);p(6,2,O);
+        p(0,3,O);p(1,3,B);p(2,3,O);p(3,3,O);p(4,3,O);p(5,3,O);p(6,3,B);p(7,3,O);
+        // blue belly
+        p(0,4,O);p(1,4,O);p(2,4,BL);p(3,4,BL);p(4,4,BL);p(5,4,BL);p(6,4,O);p(7,4,O);
+        p(1,5,O);p(2,5,BL);p(3,5,BL);p(4,5,BL);p(5,5,BL);p(6,5,O);
+        p(2,6,O);p(3,6,O);p(4,6,O);p(5,6,O);
+        // tail with flame
+        p(7,5,O);p(7,6,O);p(8,7,R);p(8,6,Y2);
+
+      } else if (n === "잠만보") {
+        // 크고 둥근 몸, 크림 배, 잠든 표정, Zzz
+        const T='#4A7C6F', C='#F5DEB3', D='#2E5043';
+        // big round body
+        p(1,1,T);p(2,1,T);p(3,1,T);p(4,1,T);p(5,1,T);p(6,1,T);
+        p(0,2,T);p(1,2,T);p(2,2,T);p(3,2,T);p(4,2,T);p(5,2,T);p(6,2,T);p(7,2,T);
+        // sleepy closed eyes (line eyes)
+        p(0,3,T);p(1,3,B);p(2,3,B);p(3,3,T);p(4,3,T);p(5,3,B);p(6,3,B);p(7,3,T);
+        // huge cream belly
+        p(0,4,T);p(1,4,C);p(2,4,C);p(3,4,C);p(4,4,C);p(5,4,C);p(6,4,C);p(7,4,T);
+        p(0,5,T);p(1,5,C);p(2,5,C);p(3,5,C);p(4,5,C);p(5,5,C);p(6,5,C);p(7,5,T);
+        p(0,6,T);p(1,6,C);p(2,6,C);p(3,6,C);p(4,6,C);p(5,6,C);p(6,6,C);p(7,6,T);
+        p(0,7,T);p(1,7,T);p(2,7,T);p(3,7,T);p(4,7,T);p(5,7,T);p(6,7,T);p(7,7,T);
+        // Zzz (sleeping)
+        p(8,1,D);p(9,1,D);p(8,2,D);
+
+      } else if (n === "메타몽") {
+        // 보라 점액 덩어리, 단순한 점 눈 + 물결 입
+        const P='#9B59B6', L='#C39BD3', D='#7D3C98';
+        // blob
+        p(2,0,L);p(3,0,L);p(4,0,L);p(5,0,L);
+        p(1,1,P);p(2,1,P);p(3,1,P);p(4,1,P);p(5,1,P);p(6,1,P);
+        p(0,2,P);p(1,2,P);p(2,2,P);p(3,2,P);p(4,2,P);p(5,2,P);p(6,2,P);p(7,2,P);
+        p(0,3,P);p(1,3,P);p(2,3,P);p(3,3,P);p(4,3,P);p(5,3,P);p(6,3,P);p(7,3,P);
+        // dot eyes
+        p(2,4,B);p(5,4,B);
+        p(0,5,P);p(1,5,P);p(2,5,P);p(3,5,P);p(4,5,P);p(5,5,P);p(6,5,P);p(7,5,P);
+        // squiggle mouth
+        p(2,5,B);p(3,5,D);p(4,5,D);p(5,5,B);
+        p(1,6,P);p(2,6,P);p(3,6,P);p(4,6,P);p(5,6,P);p(6,6,P);
+        p(2,7,P);p(3,7,P);p(4,7,P);p(5,7,P);
+        // highlight
+        p(2,1,L);p(1,2,L);
       }
 
       // crown
-      ctx.fillStyle = "#FFD700";
-      ctx.shadowColor = "#FFD700"; ctx.shadowBlur = 8;
+      ctx.fillStyle = '#FFD700';
+      ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 8;
       for (let ci = 0; ci < 3; ci++) {
         const cx2 = (-1 + ci) * sc * 3;
         ctx.fillRect(cx2 - sc/2, -7*sc, sc, sc*2);
         ctx.beginPath(); ctx.arc(cx2, -8*sc, sc*0.8, 0, Math.PI*2); ctx.fill();
       }
       ctx.shadowBlur = 0;
-
       ctx.restore();
     }
 
