@@ -1029,21 +1029,38 @@ export default function WildCatch() {
 
       // ── 1. 피카추 (Pikachu) ──
       if (n === "피카추") {
-        const [Y1,Y2,Y3,DA,R] = ['#FFF8A0','#FFE135','#C8A000','#7A4800','#E84040'];
-        p(2,0,DA);p(3,0,DA);p(5,0,DA);p(6,0,DA);          // ear black tips
-        p(1,1,DA);p(2,1,Y3);p(3,1,Y2);p(5,1,Y2);p(6,1,Y3);p(7,1,DA);
-        p(2,2,Y2);p(3,2,Y3);p(5,2,Y3);p(6,2,Y2);
-        p(2,3,Y1);p(3,3,Y1);p(4,3,Y1);p(5,3,Y1);           // head top highlight
-        p(1,4,Y2);p(2,4,Y1);p(3,4,Y2);p(4,4,Y2);p(5,4,Y1);p(6,4,Y2);
-        p(2,4,DA);p(6,4,DA);                                // eyes
-        p(0,5,Y2);p(1,5,R);p(2,5,Y2);p(3,5,Y2);p(4,5,Y2);p(5,5,Y2);p(6,5,R);p(7,5,Y2); // cheeks
-        p(3,5,DA);p(4,5,DA);                                // nose
-        p(1,6,Y2);p(2,6,Y1);p(3,6,Y1);p(4,6,Y1);p(5,6,Y1);p(6,6,Y2);  // body
-        p(0,7,Y3);p(1,7,Y2);p(2,7,DA);p(3,7,Y2);p(4,7,Y2);p(5,7,DA);p(6,7,Y2);p(7,7,Y3); // belly stripe
-        p(1,8,Y2);p(2,8,Y3);p(5,8,Y3);p(6,8,Y2);          // legs
-        p(1,9,Y3);p(2,9,DA);p(5,9,DA);p(6,9,Y3);           // feet
-        // lightning tail
-        p(8,3,DA);p(9,3,Y2);p(9,4,Y3);p(8,5,Y2);p(8,6,Y3);p(9,7,Y2);p(9,8,DA);
+        const BK='#1A0A00',Y1='#FFF8A0',Y2='#FFE135',Y3='#C8A000',DA='#7A4800',R='#CC1100',PK='#FF9090',W='#FFFFFF';
+        // Row 0: ear tips
+        p(1,0,BK);p(2,0,BK);                                // left ear tip
+        p(6,0,BK);p(7,0,BK);p(8,0,BK);                     // right ear tip (extends upper-right)
+        // Row 1: ear bases
+        p(1,1,DA);p(2,1,Y3);p(3,1,Y3);                     // left ear base
+        p(5,1,DA);p(6,1,BK);p(7,1,DA);                     // right ear base
+        // Row 2: ear-head transition
+        p(2,2,Y3);p(3,2,Y2);p(4,2,Y2);                     // left ear lower / head top
+        p(5,2,DA);p(6,2,Y3);                                // right ear lower
+        // Row 3: upper head
+        p(2,3,DA);p(3,3,Y1);p(4,3,Y1);p(5,3,Y2);p(6,3,DA);
+        // Row 4: eyes
+        p(1,4,DA);p(2,4,BK);p(3,4,W);p(4,4,Y2);p(5,4,BK);p(6,4,W);p(7,4,DA);
+        // Row 5: cheeks & mouth
+        p(0,5,R);p(1,5,Y2);p(2,5,PK);p(3,5,Y2);p(4,5,DA);p(5,5,Y2);p(6,5,R);p(7,5,DA);
+        // Row 6: upper body
+        p(1,6,DA);p(2,6,Y2);p(3,6,Y1);p(4,6,Y2);p(5,6,Y2);p(6,6,Y3);p(7,6,DA);
+        // Row 7: body
+        p(1,7,Y3);p(2,7,Y2);p(3,7,Y2);p(4,7,Y2);p(5,7,Y2);p(6,7,Y3);
+        // Row 8: lower body
+        p(2,8,DA);p(3,8,Y3);p(4,8,Y2);p(5,8,Y3);p(6,8,DA);
+        // Row 9: legs
+        p(2,9,Y3);p(3,9,DA);p(4,9,Y3);p(5,9,DA);p(6,9,Y3);
+        // Row 10: feet
+        p(1,10,DA);p(2,10,Y3);p(3,10,DA);p(4,10,DA);p(5,10,Y3);p(6,10,DA);
+        // lightning tail (right side)
+        p(8,4,DA);p(9,4,Y2);
+        p(9,5,Y3);p(8,5,Y2);
+        p(8,6,Y3);p(9,6,DA);
+        p(9,7,Y2);p(8,7,Y3);
+        p(9,8,DA);
 
       // ── 2. 라이추 (Raichu) ──
       } else if (n === "라이추") {
