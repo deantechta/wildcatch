@@ -126,7 +126,7 @@ const BOSS_MONSTERS = [
   { name: "꼬부기" },   { name: "거북왕" },   { name: "팬텀" },     { name: "이상해씨" },
   { name: "리자몽" },   { name: "잠만보" },
   { name: "이브이" },   { name: "뮤츠" },     { name: "뮤" },       { name: "푸린" },
-  { name: "망나뇽" },   { name: "이상해꽃" }, { name: "후딘" },     { name: "찌리리공" },
+  { name: "망나뇽" },   { name: "이상해꽃" }, { name: "후딘" },     { name: "붐볼" },
   { name: "식스테일" }, { name: "가디" },
 ];
 
