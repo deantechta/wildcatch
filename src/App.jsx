@@ -1469,6 +1469,11 @@ export default function WildCatch() {
             s.combo = 0;
             spawnParticles(s.monster.x, s.monster.y, false);
             s.shake = 20;
+            if (s.monster.boss) {
+              // 보스는 도망치지 않음 — 그 자리에 유지
+              showMsg(`💨 빗나갔다! 보스 HP: ${"❤️".repeat(s.monster.hp)}`, false);
+              s.raf = requestAnimationFrame(loop); return;
+            }
             showMsg(`💨 ${s.monster.name} 도망갔다!`, false);
             const dir = s.monster.x < GW / 2 ? -1 : 1;
             s.monster.vx = dir * 7;
