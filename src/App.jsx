@@ -1359,7 +1359,7 @@ export default function WildCatch() {
             const dx = s.ball.x - mon.x;
             const dy = s.ball.y - mon.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 60) {
+            if (dist < 100) {
               mon.vx = Math.abs(mon.vx) * (dx > 0 ? -1 : 1);
             }
           }
@@ -1382,7 +1382,7 @@ export default function WildCatch() {
             mon.vy += 0.08; // gravity
           } else if (mon.pattern === "zigzag") {
             mon.zigzagTimer = (mon.zigzagTimer || 0) + 1;
-            if (mon.zigzagTimer % 100 === 0) mon.vx *= -1;
+            if (mon.zigzagTimer % 80 === 0) mon.vx *= -1;
             mon.x += mon.vx * slowFactor;
             mon.y += mon.vy * slowFactor;
           } else {
