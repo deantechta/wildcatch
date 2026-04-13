@@ -120,6 +120,20 @@ const MONSTERS = [
   { level: 10, emoji: "🪄", name: "마법사",   rarity: "legend" },
 ];
 
+// ── Boss Monster Definitions ──────────────────────────────
+const BOSS_MONSTERS = [
+  { name: "피카추",   color1: "#FFE135", color2: "#FF8C00", accent: "#B22222", type: "electric" },
+  { name: "라이추",   color1: "#FF8C00", color2: "#8B0000", accent: "#FFA500", type: "electric" },
+  { name: "파이리",   color1: "#FF6347", color2: "#FF4500", accent: "#FFD700", type: "fire" },
+  { name: "꼬부기",   color1: "#4169E1", color2: "#1E3A8A", accent: "#87CEEB", type: "water" },
+  { name: "거북왕",   color1: "#2F855A", color2: "#1A4731", accent: "#63B3ED", type: "water" },
+  { name: "팬텀",     color1: "#6B46C1", color2: "#2D3748", accent: "#E9D8FD", type: "ghost" },
+  { name: "이상해씨", color1: "#38A169", color2: "#276749", accent: "#FC8181", type: "grass" },
+  { name: "리자몽",   color1: "#E53E3E", color2: "#C05621", accent: "#68D391", type: "fire" },
+  { name: "잠만보",   color1: "#F6E05E", color2: "#D69E2E", accent: "#FBB6CE", type: "normal" },
+  { name: "메타몽",   color1: "#805AD5", color2: "#553C9A", accent: "#E9D8FD", type: "normal" },
+];
+
 const RARITY_COLOR = {
   common: "#78909C", uncommon: "#43A047",
   rare: "#1E88E5", epic: "#8E24AA", legend: "#FFD700",
@@ -557,6 +571,43 @@ export default function WildCatch() {
     function drawBall(bx, by) {
       const isGolden = s.ball.golden;
       const c = isGolden ? "#FFD700" : BALL_COLORS[s.ballLvl - 1];
+      const blvl = s.ballLvl;
+
+      // level-based trail effects (Lv3+)
+      if (!isGolden && blvl >= 3 && s.ball.trail && s.ball.trail.length > 0) {
+        s.ball.trail.forEach((pt, i) => {
+          const ratio = i / s.ball.trail.length;
+          if (blvl >= 8) {
+            // Lv8+: rainbow trail
+            ctx.globalAlpha = ratio * 0.55;
+            ctx.fillStyle = `hsl(${(Date.now() * 0.4 + i * 28) % 360},100%,65%)`;
+          } else if (blvl >= 5) {
+            // Lv5-7: colored glow trail
+            ctx.globalAlpha = ratio * 0.45;
+            ctx.fillStyle = c;
+          } else {
+            // Lv3-4: simple fade trail
+            ctx.globalAlpha = ratio * 0.28;
+            ctx.fillStyle = c;
+          }
+          const r = BALL_R * (0.25 + ratio * 0.55);
+          ctx.beginPath(); ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2); ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+      }
+
+      // level sparkle particles (Lv6+)
+      if (!isGolden && blvl >= 6) {
+        const sparkCount = blvl >= 9 ? 5 : 3;
+        ctx.shadowColor = c; ctx.shadowBlur = blvl >= 9 ? 20 : 10;
+        for (let i = 0; i < sparkCount; i++) {
+          const a = Date.now() * 0.007 + (i / sparkCount) * Math.PI * 2;
+          const sr = BALL_R + 5 + Math.sin(Date.now() * 0.012 + i) * 2;
+          ctx.fillStyle = `rgba(255,255,255,${0.7 - i * 0.1})`;
+          ctx.beginPath(); ctx.arc(bx + Math.cos(a) * sr * 0.45, by + Math.sin(a) * sr * 0.45, 2, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+      }
 
       // golden outer sparkle + rainbow trail
       if (isGolden) {
@@ -781,20 +832,20 @@ export default function WildCatch() {
       ctx.beginPath(); ctx.ellipse(mx, my + MON_R + 4, MON_R * 0.8, MON_R * 0.2, 0, 0, Math.PI * 2); ctx.fill();
 
       ctx.shadowBlur = 0;
-      // 보스: 크기 2배
-      const emojiSize = mon.boss ? 72 : 42;
-      ctx.font = `${emojiSize}px serif`;
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(mon.emoji, mx, my);
-
-      // 보스 HP 표시
       if (mon.boss) {
+        // pixel art boss sprite
+        drawBossSprite(mon, mx, my, t);
+        // boss HP display
         ctx.fillStyle = "#FF5252";
         ctx.font = "bold 12px monospace";
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.shadowColor = "#FF5252"; ctx.shadowBlur = 10;
-        ctx.fillText(`HP ${"❤️".repeat(mon.hp)}`, mx, my - MON_R - 22);
+        ctx.fillText(`HP ${"❤️".repeat(mon.hp)}`, mx, my - MON_R - 28);
         ctx.shadowBlur = 0;
+      } else {
+        ctx.font = "42px serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(mon.emoji, mx, my);
       }
 
       // 졸음형: 잠든 상태 Zzz 표시
@@ -830,20 +881,180 @@ export default function WildCatch() {
 
     // ── catch orbit animation ──
     function drawOrbit(mon, t) {
-      const c = BALL_COLORS[s.ballLvl - 1];
-      for (let i = 0; i < 3; i++) {
-        const a = t * 0.06 + (i * Math.PI * 2) / 3;
-        const bx = mon.x + Math.cos(a) * 38;
-        const by2 = mon.y + Math.sin(a) * 14;
-        ctx.globalAlpha = 0.6 + 0.35 * Math.sin(a + t * 0.03);
-        ctx.fillStyle = c;
-        ctx.beginPath(); ctx.arc(bx, by2, 7, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 1;
+      const blvl = s.ballLvl;
+      const orbitCount = blvl >= 7 ? 5 : blvl >= 4 ? 4 : 3;
+      const orbitR = 34 + blvl * 2;
+      const ballR = 5 + Math.floor(blvl / 3);
+      const speed = 0.06 + blvl * 0.005;
+
+      for (let i = 0; i < orbitCount; i++) {
+        const a = t * speed + (i * Math.PI * 2) / orbitCount;
+        const bx = mon.x + Math.cos(a) * orbitR;
+        const by2 = mon.y + Math.sin(a) * (orbitR * 0.38);
+
+        // color varies by level
+        let col;
+        if (blvl >= 9) {
+          col = `hsl(${(Date.now() * 0.5 + i * 72) % 360},100%,65%)`;
+        } else if (blvl >= 6) {
+          col = `hsl(${(i * 360 / orbitCount + t) % 360},90%,65%)`;
+        } else {
+          col = BALL_COLORS[blvl - 1];
+        }
+
+        ctx.globalAlpha = 0.55 + 0.4 * Math.sin(a + t * 0.04);
+        if (blvl >= 5) {
+          ctx.shadowColor = col; ctx.shadowBlur = 10;
+        }
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(bx, by2, ballR, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // stripe line on ball
+        ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(bx - 7, by2); ctx.lineTo(bx + 7, by2);
+        ctx.moveTo(bx - ballR, by2); ctx.lineTo(bx + ballR, by2);
         ctx.stroke();
         ctx.globalAlpha = 1;
       }
+    }
+
+    // ── boss pixel art sprite ──
+    function drawBossSprite(mon, mx, my, t) {
+      const bdef = BOSS_MONSTERS.find(b => b.name === mon.name) || BOSS_MONSTERS[0];
+      const c1 = bdef.color1, c2 = bdef.color2, ca = bdef.accent;
+      const sc = 3; // pixel scale
+      const pulse = 1 + 0.06 * Math.sin(t * 0.05);
+      ctx.save();
+      ctx.translate(mx, my);
+      ctx.scale(pulse, pulse);
+
+      // Draw helper: px grid (0,0 = center)
+      const px = (gx, gy, col) => {
+        ctx.fillStyle = col;
+        ctx.fillRect((gx - 4) * sc, (gy - 6) * sc, sc, sc);
+      };
+
+      const type = bdef.type;
+
+      if (type === "electric") {
+        // Pikachu/Raichu style: round yellow body
+        const dots = [
+          // ears
+          [3,0,c2],[4,0,c2],[3,1,c2],[4,1,c2],
+          [3,2,c1],[4,2,c1],
+          // head
+          [2,2,c1],[5,2,c1],[1,3,c1],[2,3,c1],[3,3,c1],[4,3,c1],[5,3,c1],[6,3,c1],
+          [1,4,c1],[2,4,ca],[3,4,c1],[4,4,c1],[5,4,ca],[6,4,c1],
+          [1,5,c1],[2,5,c1],[3,5,c1],[4,5,c1],[5,5,c1],[6,5,c1],
+          // eyes
+          [2,3,"#111"],[5,3,"#111"],
+          // body
+          [1,6,c1],[2,6,c1],[3,6,c1],[4,6,c1],[5,6,c1],[6,6,c1],
+          [2,7,c2],[3,7,c2],[4,7,c2],[5,7,c2],
+          [2,8,c2],[3,8,c2],[4,8,c2],[5,8,c2],
+          // tail zigzag
+          [7,5,c2],[8,4,c2],[7,3,c2],[8,2,ca],
+        ];
+        dots.forEach(([gx,gy,col]) => px(gx,gy,col));
+      } else if (type === "fire") {
+        // Charmander/Charizard style: orange body with flame
+        const dots = [
+          // head
+          [2,1,c1],[3,1,c1],[4,1,c1],[5,1,c1],
+          [1,2,c1],[2,2,c1],[3,2,c1],[4,2,c1],[5,2,c1],[6,2,c1],
+          [1,3,c1],[2,3,c1],[3,3,c1],[4,3,c1],[5,3,c1],[6,3,c1],
+          // eyes
+          [2,2,"#111"],[5,2,"#111"],
+          // body
+          [2,4,c1],[3,4,c1],[4,4,c1],[5,4,c1],
+          [1,5,c1],[2,5,c1],[3,5,c1],[4,5,c1],[5,5,c1],[6,5,c1],
+          [2,6,c2],[3,6,c2],[4,6,c2],[5,6,c2],
+          // belly
+          [3,4,"#FFDEAD"],[4,4,"#FFDEAD"],[3,5,"#FFDEAD"],[4,5,"#FFDEAD"],
+          // tail flame
+          [7,6,c1],[7,5,ca],[8,4,ca],[7,3,"#FF0"],[8,3,"#FFA"],
+        ];
+        dots.forEach(([gx,gy,col]) => px(gx,gy,col));
+      } else if (type === "water") {
+        // Squirtle/Blastoise style: blue shell
+        const dots = [
+          // head
+          [2,1,c1],[3,1,c1],[4,1,c1],[5,1,c1],
+          [1,2,c1],[2,2,c1],[3,2,c1],[4,2,c1],[5,2,c1],[6,2,c1],
+          [1,3,c1],[2,3,c1],[3,3,c1],[4,3,c1],[5,3,c1],[6,3,c1],
+          // eyes
+          [2,2,"#111"],[5,2,"#111"],
+          // shell
+          [1,4,c2],[2,4,c2],[3,4,c2],[4,4,c2],[5,4,c2],[6,4,c2],
+          [1,5,c2],[2,5,ca],[3,5,ca],[4,5,ca],[5,5,ca],[6,5,c2],
+          [1,6,c2],[2,6,c2],[3,6,c2],[4,6,c2],[5,6,c2],[6,6,c2],
+          // cannons
+          [0,4,c2],[7,4,c2],
+        ];
+        dots.forEach(([gx,gy,col]) => px(gx,gy,col));
+      } else if (type === "ghost") {
+        // Phantom style: purple ghost
+        const dots = [
+          // body top (rounded)
+          [3,1,c1],[4,1,c1],[5,1,c1],
+          [2,2,c1],[3,2,c1],[4,2,c1],[5,2,c1],[6,2,c1],
+          [2,3,c1],[3,3,c1],[4,3,c1],[5,3,c1],[6,3,c1],
+          [2,4,c1],[3,4,c1],[4,4,c1],[5,4,c1],[6,4,c1],
+          [2,5,c1],[3,5,c1],[4,5,c1],[5,5,c1],[6,5,c1],
+          // eyes
+          [3,3,ca],[5,3,ca],[3,4,ca],[5,4,ca],
+          // bottom jagged
+          [2,6,c1],[3,6,c2],[4,6,c1],[5,6,c2],[6,6,c1],
+          // glow
+          [3,2,"rgba(233,216,253,0.4)"],[4,2,"rgba(233,216,253,0.4)"],
+        ];
+        dots.forEach(([gx,gy,col]) => px(gx,gy,col));
+      } else if (type === "grass") {
+        // Bulbasaur style: green with bulb
+        const dots = [
+          // head
+          [2,2,c1],[3,2,c1],[4,2,c1],[5,2,c1],
+          [1,3,c1],[2,3,c1],[3,3,c1],[4,3,c1],[5,3,c1],[6,3,c1],
+          [1,4,c1],[2,4,c1],[3,4,c1],[4,4,c1],[5,4,c1],[6,4,c1],
+          // eyes
+          [2,3,"#111"],[5,3,"#111"],
+          // body
+          [2,5,c1],[3,5,c1],[4,5,c1],[5,5,c1],
+          [2,6,c2],[3,6,c2],[4,6,c2],[5,6,c2],
+          // bulb on back
+          [3,1,c2],[4,1,c2],[5,1,c2],[3,0,ca],[4,0,ca],
+        ];
+        dots.forEach(([gx,gy,col]) => px(gx,gy,col));
+      } else {
+        // Normal (Snorlax/Ditto): round chunky
+        const dots = [
+          [2,1,c1],[3,1,c1],[4,1,c1],[5,1,c1],
+          [1,2,c1],[2,2,c1],[3,2,c1],[4,2,c1],[5,2,c1],[6,2,c1],
+          [1,3,c1],[2,3,c1],[3,3,c1],[4,3,c1],[5,3,c1],[6,3,c1],
+          [1,4,c1],[2,4,c1],[3,4,c1],[4,4,c1],[5,4,c1],[6,4,c1],
+          [1,5,c1],[2,5,c1],[3,5,c1],[4,5,c1],[5,5,c1],[6,5,c1],
+          [2,6,c1],[3,6,c1],[4,6,c1],[5,6,c1],
+          // belly / features
+          [2,3,"#fff"],[5,3,"#fff"],
+          [2,4,c2],[3,4,c2],[4,4,c2],[5,4,c2],
+          // eyes
+          [2,2,"#111"],[5,2,"#111"],
+        ];
+        dots.forEach(([gx,gy,col]) => px(gx,gy,col));
+      }
+
+      // crown
+      ctx.fillStyle = "#FFD700";
+      ctx.shadowColor = "#FFD700"; ctx.shadowBlur = 8;
+      for (let ci = 0; ci < 3; ci++) {
+        const cx2 = (-1 + ci) * sc * 3;
+        ctx.fillRect(cx2 - sc/2, -7*sc, sc, sc*2);
+        ctx.beginPath(); ctx.arc(cx2, -8*sc, sc*0.8, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+
+      ctx.restore();
     }
 
     // ── particles ──
@@ -1121,21 +1332,23 @@ export default function WildCatch() {
 
           // special monster every 10 catches
           const isSpecialSpawn = s.totalCaught > 0 && s.totalCaught % 10 === 0;
-          // boss every 50 catches (overrides special)
-          const isBossSpawn = s.totalCaught > 0 && s.totalCaught % 50 === 0;
+          // boss every 20 catches (overrides special)
+          const isBossSpawn = s.totalCaught > 0 && s.totalCaught % 20 === 0;
           s.phase = "playing";
           s.monster = spawnMonster(s.ballLvl, s.charLvl, isBossSpawn ? false : isSpecialSpawn);
           s.monTimer = 900;
           if (isBossSpawn) {
+            const bd = BOSS_MONSTERS[Math.floor(Math.random() * BOSS_MONSTERS.length)];
             s.monster.boss = true;
             s.monster.hp = 2;
             s.monster.level = 10;
             s.monster.rarity = "legend";
             s.monster.emoji = "👑";
-            s.monster.name = "대왕 보스";
+            s.monster.name = bd.name;
+            s.monster.bossType = bd.type;
             s.monster.vx *= 1.5;
             s.monster.vy *= 1.5;
-            showMsg("💀 대왕 보스 등장!! 2번 맞춰야 잡힌다!", false);
+            showMsg(`👑 ${bd.name} 등장!! 2번 맞춰야 잡힌다!`, false);
           } else if (isSpecialSpawn) {
             showMsg("🌟 특별 몬스터 등장!", true);
           }
@@ -1235,11 +1448,16 @@ export default function WildCatch() {
 
         if (s.ball.active) {
           s.ball.y -= 9;
-          // 황금볼 무지개 궤적 업데이트
+          // trail 업데이트 (황금볼 또는 Lv3+ 일반 볼)
           if (s.ball.golden) {
             if (!s.ball.rainbowTrail) s.ball.rainbowTrail = [];
             s.ball.rainbowTrail.unshift({ x: s.ball.x, y: s.ball.y });
             if (s.ball.rainbowTrail.length > 12) s.ball.rainbowTrail.pop();
+          } else if (s.ballLvl >= 3) {
+            if (!s.ball.trail) s.ball.trail = [];
+            s.ball.trail.unshift({ x: s.ball.x, y: s.ball.y });
+            const maxLen = 4 + (s.ballLvl - 3) * 2; // Lv3:4, Lv10:18
+            if (s.ball.trail.length > maxLen) s.ball.trail.pop();
           }
           if (s.ball.y < -20) {
             s.ball.active = false;
@@ -1255,6 +1473,19 @@ export default function WildCatch() {
                 setGameOver(true);
               } else {
                 showMsg(`놓쳤다! (${s.missStreak}/${limit})`, false);
+                // 7번 연속 miss → 도움 아이템 자동 등장
+                if (s.missStreak >= 7 && !s.item) {
+                  const helpType = Math.random() < 0.5 ? "shield" : "autoCatch";
+                  s.item = {
+                    type: helpType,
+                    x: GW / 2 + (Math.random() > 0.5 ? 1 : -1) * (40 + Math.random() * 80),
+                    y: 80 + Math.random() * 100,
+                    vx: (Math.random() > 0.5 ? 1 : -1) * 0.6,
+                    vy: 0,
+                    timer: 400,
+                  };
+                  setTimeout(() => showMsg("💝 힘내! 도움 아이템이 나타났어!", true), 600);
+                }
               }
             }
           }
@@ -1300,12 +1531,14 @@ export default function WildCatch() {
                   spawnLevelUpEffect(s.monster.x, s.monster.y);
                   showMsg(`🎫 뽑기권! ${s.monster.name} 자동 포획!`, true);
                   const isSpecial2 = s.totalCaught > 0 && s.totalCaught % 10 === 0;
-                  const isBoss2 = s.totalCaught > 0 && s.totalCaught % 50 === 0;
+                  const isBoss2 = s.totalCaught > 0 && s.totalCaught % 20 === 0;
                   s.monster = spawnMonster(s.ballLvl, s.charLvl, isBoss2 ? false : isSpecial2);
                   if (isBoss2) {
+                    const bd2 = BOSS_MONSTERS[Math.floor(Math.random() * BOSS_MONSTERS.length)];
                     s.monster.boss = true; s.monster.hp = 2;
                     s.monster.level = 10; s.monster.rarity = "legend";
-                    s.monster.emoji = "👑"; s.monster.name = "대왕 보스";
+                    s.monster.emoji = "👑"; s.monster.name = bd2.name;
+                    s.monster.bossType = bd2.type;
                     s.monster.vx *= 1.5; s.monster.vy *= 1.5;
                   }
                   s.monTimer = 900;
@@ -1853,6 +2086,7 @@ function RulesModal({ onClose }) {
         "볼을 던졌는데 못 맞히면 MISS 카운트",
         "Lv.1-9: 20번, Lv.10-19: 18번, Lv.20-29: 16번",
         "Lv.30-39: 14번, Lv.40-49: 12번, Lv.50: 10번 실패 시 종료",
+        "7번 연속 miss 시 💝 도움 아이템 자동 등장!",
         "몬스터 도망은 MISS 카운트 없음",
         "시간 초과 후 10초 카운트다운 0이 되면 즉시 종료",
       ],
@@ -1863,6 +2097,16 @@ function RulesModal({ onClose }) {
         "연속 포획 성공마다 콤보 증가!",
         "5콤보 달성 시 🌟황금볼 지급 (확정 포획)",
         "실패하면 콤보 초기화",
+      ],
+    },
+    {
+      title: "🎯 볼 레벨 이펙트",
+      items: [
+        "볼 레벨이 높을수록 던질 때 이펙트 강화!",
+        "Lv3+: 볼 궤적 trail 등장",
+        "Lv6+: 반짝이 스파크 추가",
+        "Lv8+: 무지개 레인보우 trail",
+        "포획 중 공이 도는 orbit도 레벨에 따라 변화",
       ],
     },
     {
@@ -1909,9 +2153,10 @@ function RulesModal({ onClose }) {
     {
       title: "💀 보스 몬스터",
       items: [
-        "50마리 포획마다 대왕 보스 👑 등장!",
+        "20마리 포획마다 특별 보스 등장!",
+        "피카추·파이리·꼬부기 등 10종 도트 캐릭터",
         "보스는 2번 맞춰야 포획됨 (HP ❤️❤️)",
-        "보스는 크기가 2배, 속도도 더 빠름",
+        "보스는 크기가 크고 속도도 더 빠름",
         "황금볼 + 뽑기권 활용 추천!",
       ],
     },
