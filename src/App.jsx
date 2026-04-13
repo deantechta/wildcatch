@@ -1424,10 +1424,12 @@ export default function WildCatch() {
               showMsg(`🏆 ${s.combo}콤보! 황금볼 획득!`, true);
             }
 
+            const scoreMult = s.difficulty === "easy" ? 2 : 1;
+
             if (wasBoss) {
               // 보스 포획: lv10 몬스터 3배 = 30 XP (일반 +level 10은 아래서 추가)
               s.charXp += 20; // 총 30XP (10은 아래 s.monster.level에서)
-              s.totalScore += 20;
+              s.totalScore += 20 * scoreMult;
             } else if (wasSpecial) {
               s.specialCaught++;
               s.specialBanner = 200;
@@ -1435,14 +1437,14 @@ export default function WildCatch() {
               // 특별 몬스터 포획: XP 대량 보너스 (5레벨치)
               const specialBonus = CHAR_XP_REQ[Math.min(s.charLvl - 1, CHAR_XP_REQ.length - 1)] * 5;
               s.charXp += specialBonus;
-              s.totalScore += specialBonus;
+              s.totalScore += specialBonus * scoreMult;
               s.charLvl = Math.min(50, charLvlFromXp(s.charXp));
               spawnLevelUpEffect(s.player.x, GROUND_Y - PLAYER_H);
             }
 
             // Character XP & level up
             s.charXp += s.monster.level;
-            s.totalScore += s.monster.level;
+            s.totalScore += s.monster.level * scoreMult;
             const newCharLvl = charLvlFromXp(s.charXp);
             if (newCharLvl > s.charLvl) {
               s.charLvl = newCharLvl;
@@ -1688,7 +1690,7 @@ export default function WildCatch() {
                   s.totalCaught++;
                   s.xp += s.monster.level * (s.goldenTime ? 2 : 1);
                   s.charXp += s.monster.level;
-                  s.totalScore += s.monster.level;
+                  s.totalScore += s.monster.level * (s.difficulty === "easy" ? 2 : 1);
                   s.charLvl = Math.min(50, charLvlFromXp(s.charXp));
                   s.combo++;
                   s.missStreak = 0;
@@ -1758,7 +1760,7 @@ export default function WildCatch() {
             const dx = s.ball.x - mon.x;
             const dy = s.ball.y - mon.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            const fleeRange = s.difficulty === "easy" ? 50 : 100;
+            const fleeRange = s.difficulty === "easy" ? 50 : (mon.boss ? 120 : 110);
             if (dist < fleeRange) {
               mon.vx = Math.abs(mon.vx) * (dx > 0 ? -1 : 1);
             }
@@ -1782,7 +1784,8 @@ export default function WildCatch() {
             mon.vy += 0.08; // gravity
           } else if (mon.pattern === "zigzag") {
             mon.zigzagTimer = (mon.zigzagTimer || 0) + 1;
-            if (mon.zigzagTimer % 80 === 0) mon.vx *= -1;
+            const zigzagInterval = s.difficulty === "hard" ? 72 : 80;
+            if (mon.zigzagTimer % zigzagInterval === 0) mon.vx *= -1;
             mon.x += mon.vx * slowFactor;
             mon.y += mon.vy * slowFactor;
           } else {
