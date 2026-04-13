@@ -286,10 +286,10 @@ export default function WildCatch() {
   const [showRules, setShowRules] = useState(false);
 
   useEffect(() => {
-    if (gameOver || showRules) return;
+    if (gameOver || showRules || showResult) return;
     const id = setInterval(() => setPlayTime(t => t + 1), 1000);
     return () => clearInterval(id);
-  }, [gameOver, showRules]);
+  }, [gameOver, showRules, showResult]);
 
   function syncUi(msg, ok) {
     const s = gs.current;
@@ -1928,7 +1928,7 @@ export default function WildCatch() {
 
       {/* 버튼 행 */}
       <div className="btn-row" style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-        <button className="result-btn" onClick={() => setShowResult(true)} style={{
+        <button className="result-btn" onClick={() => { gs.current.paused = true; setShowResult(true); }} style={{
           padding: "6px 18px",
           background: "linear-gradient(135deg, #1A2744, #0D1E3D)",
           border: "1px solid #FFD70066", borderRadius: 20,
@@ -2007,7 +2007,7 @@ export default function WildCatch() {
         {showResult && (
           <ResultModal
             ui={ui} playTime={playTime}
-            onClose={() => setShowResult(false)}
+            onClose={() => { gs.current.paused = false; setShowResult(false); }}
           />
         )}
         {showRules && (
