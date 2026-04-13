@@ -1424,7 +1424,7 @@ export default function WildCatch() {
               showMsg(`🏆 ${s.combo}콤보! 황금볼 획득!`, true);
             }
 
-            const scoreMult = s.difficulty === "easy" ? 2 : 1;
+            const scoreMult = s.difficulty === "easy" ? 1.5 : 1;
 
             if (wasBoss) {
               // 보스 포획: lv10 몬스터 3배 = 30 XP (일반 +level 10은 아래서 추가)
@@ -1684,34 +1684,21 @@ export default function WildCatch() {
                 s.monTimer = Math.min(900, s.monTimer + 600);
                 showMsg("⏰ 시간 +10초!", true);
               } else if (type === "autoCatch") {
-                if (s.monster) {
-                  spawnParticles(s.monster.x, s.monster.y, true);
-                  s.collection.push({ ...s.monster });
-                  s.totalCaught++;
-                  s.xp += s.monster.level * (s.goldenTime ? 2 : 1);
-                  s.charXp += s.monster.level;
-                  s.totalScore += s.monster.level * (s.difficulty === "easy" ? 2 : 1);
-                  s.charLvl = Math.min(50, charLvlFromXp(s.charXp));
-                  s.combo++;
-                  s.missStreak = 0;
-                  s.dangerTimer = 0;
-                  if (s.combo > s.maxCombo) s.maxCombo = s.combo;
-                  spawnLevelUpEffect(s.monster.x, s.monster.y);
-                  showMsg(`🎫 뽑기권! ${s.monster.name} 자동 포획!`, true);
-                  const isBoss2 = s.totalCaught >= 10 && s.totalCaught % 10 === 0;
-                  const isSpecial2 = !isBoss2 && s.totalCaught > 0 && s.totalCaught % 5 === 0;
-                  s.monster = spawnMonster(s.ballLvl, s.charLvl, isBoss2 ? false : isSpecial2, s.difficulty || "hard");
-                  if (isBoss2) {
-                    const bd2 = BOSS_MONSTERS[Math.floor(Math.random() * BOSS_MONSTERS.length)];
-                    s.monster.boss = true; s.monster.hp = 5;
-                    s.monster.level = 10; s.monster.rarity = "legend";
-                    s.monster.emoji = "👑"; s.monster.name = bd2.name;
-                    s.monster.bossType = bd2.type;
-                    if (s.difficulty !== "easy") { s.monster.vx *= 1.5; s.monster.vy *= 1.5; }
-                  }
-                  s.monTimer = 900;
-                  syncUi("", true);
+                // 뽑기권: 자석/방패/빠르게/타임+ 중 랜덤 25%씩
+                const lootTypes = ["magnet", "shield", "speed", "timeplus"];
+                const lootType = lootTypes[Math.floor(Math.random() * 4)];
+                if (lootType === "shield") {
+                  s.shield = true;
+                  showMsg("🎫 뽑기! 🛡️ 방패 획득!", true);
+                } else if (lootType === "timeplus") {
+                  s.monTimer = Math.min(s.monTimer + 600, 900);
+                  showMsg("🎫 뽑기! ⏰ 시간 +10초!", true);
+                } else {
+                  s.effect = { type: lootType, timer: 300 };
+                  const lootMsg = { magnet: "🎫 뽑기! 🧲 자석 5초!", speed: "🎫 뽑기! ⚡ 빠르게 5초!" };
+                  showMsg(lootMsg[lootType], true);
                 }
+                spawnParticles(s.ball.x, s.ball.y, true);
               }
             }
           }
@@ -2395,7 +2382,7 @@ function RulesModal({ onClose }) {
         "🧲자석: 5초간 몬스터가 플레이어 쪽으로 이동",
         "🛡️방패: 다음 볼 miss 1회 무효",
         "⏰시간+: 몬스터 제한 시간 +10초",
-        "🎫뽑기권: 현재 몬스터 즉시 자동 포획!",
+        "🎫뽑기권: 자석·방패·빠르게·시간+ 중 랜덤 1개 발동! (각 25%)",
         "5초 안에 볼로 맞추지 않으면 도망!",
       ],
     },
@@ -2418,7 +2405,7 @@ function RulesModal({ onClose }) {
         "보스는 일반 몬스터의 3배 크기, 속도도 더 빠름",
         "포획 시 XP 30 획득 (lv10 몬스터의 3배)",
         "포획 성공 시 👑 보스 포켓몬 캐치! 배너 등장",
-        "황금볼 + 뽑기권 활용 추천!",
+        "황금볼 활용 추천!",
       ],
     },
     {
