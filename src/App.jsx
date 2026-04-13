@@ -336,6 +336,15 @@ export default function WildCatch() {
     });
   }
 
+  const bossImgs = useRef({});
+  useEffect(() => {
+    BOSS_MONSTERS.forEach(({ name }) => {
+      const img = new window.Image();
+      img.src = `/boss/${name}.png`;
+      bossImgs.current[name] = img;
+    });
+  }, []);
+
   const msgTimeout = useRef(null);
   function showMsg(text, ok) {
     clearTimeout(msgTimeout.current);
@@ -1019,327 +1028,10 @@ export default function WildCatch() {
       ctx.translate(mx, my);
       ctx.scale(pulse, pulse);
 
-      // p(gx,gy,col): center=(4,6), each cell=sc×sc pixels
-      const p = (gx, gy, col) => {
-        ctx.fillStyle = col;
-        ctx.fillRect((gx - 4) * sc, (gy - 6) * sc, sc, sc);
-      };
-      const B = '#111', W = '#FFF';
-      const n = mon.name;
-
-      // ── 1. 피카추 (Pikachu) ──
-      if (n === "피카추") {
-        const BK='#1A0A00',Y1='#FFF8A0',Y2='#FFE135',Y3='#C8A000',DA='#7A4800',R='#CC1100',PK='#FF9090',W='#FFFFFF';
-        // Row 0: ear tips
-        p(1,0,BK);p(2,0,BK);                                // left ear tip
-        p(6,0,BK);p(7,0,BK);p(8,0,BK);                     // right ear tip (extends upper-right)
-        // Row 1: ear bases
-        p(1,1,DA);p(2,1,Y3);p(3,1,Y3);                     // left ear base
-        p(5,1,DA);p(6,1,BK);p(7,1,DA);                     // right ear base
-        // Row 2: ear-head transition
-        p(2,2,Y3);p(3,2,Y2);p(4,2,Y2);                     // left ear lower / head top
-        p(5,2,DA);p(6,2,Y3);                                // right ear lower
-        // Row 3: upper head
-        p(2,3,DA);p(3,3,Y1);p(4,3,Y1);p(5,3,Y2);p(6,3,DA);
-        // Row 4: eyes
-        p(1,4,DA);p(2,4,BK);p(3,4,W);p(4,4,Y2);p(5,4,BK);p(6,4,W);p(7,4,DA);
-        // Row 5: cheeks & mouth
-        p(0,5,R);p(1,5,Y2);p(2,5,PK);p(3,5,Y2);p(4,5,DA);p(5,5,Y2);p(6,5,R);p(7,5,DA);
-        // Row 6: upper body
-        p(1,6,DA);p(2,6,Y2);p(3,6,Y1);p(4,6,Y2);p(5,6,Y2);p(6,6,Y3);p(7,6,DA);
-        // Row 7: body
-        p(1,7,Y3);p(2,7,Y2);p(3,7,Y2);p(4,7,Y2);p(5,7,Y2);p(6,7,Y3);
-        // Row 8: lower body
-        p(2,8,DA);p(3,8,Y3);p(4,8,Y2);p(5,8,Y3);p(6,8,DA);
-        // Row 9: legs
-        p(2,9,Y3);p(3,9,DA);p(4,9,Y3);p(5,9,DA);p(6,9,Y3);
-        // Row 10: feet
-        p(1,10,DA);p(2,10,Y3);p(3,10,DA);p(4,10,DA);p(5,10,Y3);p(6,10,DA);
-        // lightning tail (right side)
-        p(8,4,DA);p(9,4,Y2);
-        p(9,5,Y3);p(8,5,Y2);
-        p(8,6,Y3);p(9,6,DA);
-        p(9,7,Y2);p(8,7,Y3);
-        p(9,8,DA);
-
-      // ── 2. 라이추 (Raichu) ──
-      } else if (n === "라이추") {
-        const O1='#FFC870',O2='#E08020',O3='#A05010',BK='#3D2000',CR='#FAE0B0';
-        p(1,0,BK);p(2,0,O3);p(3,0,BK);p(5,0,BK);p(6,0,O3);p(7,0,BK);  // large round ears
-        p(1,1,O2);p(2,1,BK);p(3,1,O2);p(5,1,O2);p(6,1,BK);p(7,1,O2);  // dark ear centers
-        p(0,2,O3);p(1,2,O1);p(2,2,O2);p(3,2,O1);p(4,2,O2);p(5,2,O1);p(6,2,O2);p(7,2,O1);p(8,2,O3);
-        p(1,3,O2);p(2,3,O1);p(3,3,O1);p(4,3,O2);p(5,3,O1);p(6,3,O1);p(7,3,O2);
-        p(1,4,O3);p(2,4,BK);p(3,4,O1);p(4,4,CR);p(5,4,O1);p(6,4,BK);p(7,4,O3);  // eyes
-        p(0,5,O3);p(1,5,O2);p(2,5,CR);p(3,5,O1);p(4,5,CR);p(5,5,O1);p(6,5,CR);p(7,5,O2);p(8,5,O3);
-        p(1,6,O3);p(2,6,O1);p(3,6,CR);p(4,6,CR);p(5,6,CR);p(6,6,O1);p(7,6,O3);
-        p(2,7,O2);p(3,7,CR);p(4,7,CR);p(5,7,CR);p(6,7,O2);
-        p(2,8,O3);p(3,8,O2);p(4,8,O2);p(5,8,O2);p(6,8,O3);
-        p(2,9,BK);p(3,9,O3);p(5,9,O3);p(6,9,BK);
-        p(1,10,BK);p(2,10,O2);p(3,10,BK);p(5,10,BK);p(6,10,O2);p(7,10,BK);
-        p(8,5,O3);p(9,5,O2);p(9,6,O3);p(8,7,O1);p(9,8,CR);  // lightning tail
-
-      // ── 3. 파이리 (Charmander) ──
-      } else if (n === "파이리") {
-        const O1='#FFB060',O2='#FF7020',O3='#C04000',BK='#3D1500',CR='#FFEEBB',FL='#FFE030';
-        p(3,1,BK);p(4,1,O2);p(5,1,BK);
-        p(2,2,O3);p(3,2,O1);p(4,2,O1);p(5,2,O1);p(6,2,O3);
-        p(2,3,O2);p(3,3,BK);p(4,3,O2);p(5,3,BK);p(6,3,O2);  // eyes
-        p(1,4,O3);p(2,4,O1);p(3,4,CR);p(4,4,CR);p(5,4,O1);p(6,4,O1);p(7,4,O3);
-        p(2,5,O3);p(3,5,O1);p(4,5,CR);p(5,5,O1);p(6,5,O3);
-        p(3,6,O2);p(4,6,CR);p(5,6,O2);
-        p(2,7,BK);p(3,7,O3);p(5,7,O3);p(6,7,BK);
-        p(1,8,BK);p(2,8,O2);p(3,8,BK);p(5,8,BK);p(6,8,O2);p(7,8,BK);
-        p(7,5,O3);p(8,5,O2);p(8,6,O3);p(9,6,FL);p(9,7,FL);  // tail + flame
-
-      // ── 4. 꼬부기 (Squirtle) ──
-      } else if (n === "꼬부기") {
-        const BL1='#90D0F0',BL2='#4090C0',BL3='#1050A0',BK='#001040',CR='#FFF0C0',SH='#607080';
-        p(2,1,BK);p(3,1,BL2);p(4,1,BL2);p(5,1,BK);
-        p(1,2,BL3);p(2,2,BL1);p(3,2,BL1);p(4,2,BL1);p(5,2,BL1);p(6,2,BL3);
-        p(1,3,BL2);p(2,3,BK);p(3,3,BL1);p(4,3,BL1);p(5,3,BK);p(6,3,BL2);  // eyes
-        p(1,4,BL2);p(2,4,BL1);p(3,4,CR);p(4,4,CR);p(5,4,BL1);p(6,4,BL2);
-        p(0,5,SH);p(1,5,SH);p(2,5,SH);p(3,5,SH);p(4,5,SH);p(5,5,SH);p(6,5,SH);p(7,5,SH);  // shell
-        p(0,6,SH);p(1,6,BL3);p(2,6,SH);p(3,6,BL3);p(4,6,BL3);p(5,6,SH);p(6,6,BL3);p(7,6,SH);
-        p(1,7,SH);p(2,7,BL2);p(3,7,SH);p(4,7,SH);p(5,7,BL2);p(6,7,SH);
-        p(2,8,BL3);p(3,8,BL2);p(4,8,BL2);p(5,8,BL3);
-        p(2,9,BK);p(3,9,BL3);p(5,9,BL3);p(6,9,BK);
-        p(7,5,BL2);p(8,5,BL3);p(8,6,BL2);p(7,7,BL3);  // curled tail
-
-      // ── 5. 거북왕 (Blastoise) ──
-      } else if (n === "거북왕") {
-        const BL1='#80B0E0',BL2='#3060B0',BL3='#103080',BK='#001030',CR='#F0E8D0',GY='#909090';
-        p(2,0,BL3);p(3,0,BL2);p(4,0,BL2);p(5,0,BL3);
-        p(1,1,BK);p(2,1,BL1);p(3,1,BL1);p(4,1,BL1);p(5,1,BL1);p(6,1,BK);
-        p(1,2,BL2);p(2,2,BK);p(3,2,BL1);p(4,2,BL1);p(5,2,BK);p(6,2,BL2);  // eyes
-        p(1,3,BL2);p(2,3,BL1);p(3,3,CR);p(4,3,CR);p(5,3,BL1);p(6,3,BL2);
-        p(-1,3,GY);p(-1,4,GY);p(-1,5,GY);  // left cannon
-        p(8,3,GY);p(8,4,GY);p(8,5,GY);     // right cannon
-        p(0,4,BK);p(1,4,BL3);p(2,4,BL2);p(3,4,BL2);p(4,4,BL2);p(5,4,BL2);p(6,4,BL3);p(7,4,BK);
-        p(0,5,BL2);p(1,5,BL3);p(2,5,BL2);p(3,5,BL3);p(4,5,BL2);p(5,5,BL3);p(6,5,BL2);p(7,5,BL3);
-        p(0,6,BL2);p(1,6,BL2);p(2,6,BL3);p(3,6,BL2);p(4,6,BL3);p(5,6,BL2);p(6,6,BL2);p(7,6,BL2);
-        p(2,7,BK);p(3,7,BL3);p(5,7,BL3);p(6,7,BK);
-        p(1,8,BK);p(2,8,BL2);p(3,8,BK);p(5,8,BK);p(6,8,BL2);p(7,8,BK);
-
-      // ── 6. 팬텀 (Gengar) ──
-      } else if (n === "팬텀") {
-        const P1='#C090E0',P2='#8040C0',P3='#400080',BK='#200040',RD='#FF2020',WT='#FFFFFF';
-        p(1,0,BK);p(2,0,P3);p(3,0,P2);p(4,0,P2);p(5,0,P2);p(6,0,P3);p(7,0,BK);
-        p(0,1,P3);p(1,1,P2);p(2,1,P1);p(3,1,P1);p(4,1,P1);p(5,1,P1);p(6,1,P2);p(7,1,P3);p(8,1,BK);
-        p(0,2,P2);p(1,2,P1);p(2,2,RD);p(3,2,P1);p(4,2,P1);p(5,2,P1);p(6,2,RD);p(7,2,P1);p(8,2,P2);
-        p(0,3,P3);p(1,3,P1);p(2,3,P2);p(3,3,P1);p(4,3,P1);p(5,3,P1);p(6,3,P2);p(7,3,P1);p(8,3,P3);
-        p(1,4,P2);p(2,4,BK);p(3,4,WT);p(4,4,BK);p(5,4,WT);p(6,4,BK);p(7,4,P2);  // grin teeth
-        p(1,5,P2);p(2,5,WT);p(3,5,P2);p(4,5,P2);p(5,5,P2);p(6,5,WT);p(7,5,P2);
-        p(0,6,P3);p(1,6,P2);p(2,6,P2);p(3,6,P1);p(4,6,P1);p(5,6,P2);p(6,6,P2);p(7,6,P3);
-        p(1,7,P3);p(2,7,P2);p(3,7,P2);p(4,7,P2);p(5,7,P2);p(6,7,P3);
-        p(2,8,BK);p(3,8,P3);p(4,8,P3);p(5,8,BK);
-        p(-1,3,P2);p(-1,4,P3);p(8,3,P2);p(8,4,P3);  // floating hands
-
-      // ── 7. 이상해씨 (Bulbasaur) ──
-      } else if (n === "이상해씨") {
-        const G1='#80D090',G2='#40A050',G3='#106020',BK='#002010',TL='#60C0A0',BU='#60D080';
-        p(4,0,G3);p(5,0,G3);p(6,0,G3);  // bulb on back
-        p(3,1,G2);p(4,1,G3);p(5,1,G2);p(6,1,G2);p(7,1,G3);
-        p(3,2,G1);p(4,2,BU);p(5,2,BU);p(6,2,G1);p(7,2,G2);
-        p(1,3,BK);p(2,3,TL);p(3,3,G1);p(4,3,TL);p(5,3,TL);p(6,3,BK);
-        p(1,4,TL);p(2,4,BK);p(3,4,TL);p(4,4,TL);p(5,4,BK);p(6,4,TL);  // eyes
-        p(1,5,G2);p(2,5,TL);p(3,5,G1);p(4,5,G1);p(5,5,TL);p(6,5,G2);
-        p(0,6,G3);p(1,6,G2);p(2,6,TL);p(3,6,G1);p(4,6,G1);p(5,6,TL);p(6,6,G2);p(7,6,G3);
-        p(0,7,G3);p(1,7,G2);p(2,7,G2);p(3,7,G2);p(4,7,G2);p(5,7,G2);p(6,7,G3);
-        p(1,8,BK);p(2,8,G3);p(3,8,G2);p(4,8,G2);p(5,8,G3);p(6,8,BK);
-        p(1,9,G3);p(2,9,BK);p(3,9,G3);p(5,9,G3);p(6,9,BK);p(7,9,G3);
-
-      // ── 8. 리자몽 (Charizard) ──
-      } else if (n === "리자몽") {
-        const O1='#FFB870',O2='#FF7020',O3='#C04010',BK='#2D1000',CR='#FFF0C0',TL='#40B0A0',FL='#FFE040';
-        p(-1,2,BK);p(-1,3,TL);p(-1,4,TL);p(-1,5,BK);  // left wing
-        p(8,2,BK);p(9,2,TL);p(9,3,TL);p(9,4,TL);p(8,5,BK);  // right wing
-        p(2,0,BK);p(3,0,O2);p(4,0,O2);p(5,0,O2);p(6,0,BK);
-        p(1,1,O3);p(2,1,O1);p(3,1,O2);p(4,1,O2);p(5,1,O2);p(6,1,O1);p(7,1,O3);
-        p(1,2,O2);p(2,2,BK);p(3,2,O1);p(4,2,O2);p(5,2,BK);p(6,2,O1);p(7,2,O2);  // eyes
-        p(1,3,O2);p(2,3,O1);p(3,3,CR);p(4,3,O1);p(5,3,CR);p(6,3,O1);p(7,3,O2);
-        p(1,4,O3);p(2,4,O2);p(3,4,CR);p(4,4,CR);p(5,4,CR);p(6,4,O2);p(7,4,O3);
-        p(1,5,O3);p(2,5,O2);p(3,5,O1);p(4,5,CR);p(5,5,O1);p(6,5,O2);p(7,5,O3);
-        p(2,6,O3);p(3,6,O2);p(4,6,O2);p(5,6,O2);p(6,6,O3);
-        p(2,7,BK);p(3,7,O3);p(5,7,O3);p(6,7,BK);
-        p(3,8,BK);p(4,8,O3);p(5,8,BK);
-        p(7,6,O3);p(8,6,O2);p(8,7,O1);p(9,7,FL);p(9,8,FL);  // tail + flame
-
-      // ── 9. 리자드 (Charmeleon) ──
-      } else if (n === "리자드") {
-        const R1='#FF9060',R2='#E04020',R3='#A02010',BK='#300800',CR='#FFEEBB',FL='#FFD030';
-        p(3,0,R3);p(4,0,R2);p(5,0,R3);  // head crest
-        p(2,1,R3);p(3,1,R1);p(4,1,R1);p(5,1,R2);p(6,1,R3);
-        p(1,2,BK);p(2,2,R1);p(3,2,BK);p(4,2,R1);p(5,2,BK);p(6,2,R2);p(7,2,BK);  // eyes
-        p(1,3,R2);p(2,3,R1);p(3,3,CR);p(4,3,R1);p(5,3,CR);p(6,3,R1);p(7,3,R2);
-        p(1,4,R3);p(2,4,R1);p(3,4,CR);p(4,4,CR);p(5,4,R1);p(6,4,R3);
-        p(2,5,R2);p(3,5,R1);p(4,5,CR);p(5,5,R1);p(6,5,R2);
-        p(2,6,R3);p(3,6,R2);p(4,6,R1);p(5,6,R2);p(6,6,R3);
-        p(2,7,BK);p(3,7,R3);p(5,7,R3);p(6,7,BK);
-        p(1,8,BK);p(2,8,R2);p(3,8,BK);p(5,8,BK);p(6,8,R2);p(7,8,BK);
-        p(7,5,R3);p(8,5,R2);p(8,6,R1);p(9,6,FL);p(9,7,FL);  // tail + flame
-
-      // ── 10. 잠만보 (Snorlax) ──
-      } else if (n === "잠만보") {
-        const BL1='#8090C0',BL2='#4060A0',BL3='#204080',BK='#102030',CR='#F0E0B0';
-        p(1,0,BK);p(2,0,BL3);p(3,0,BL2);p(4,0,BL2);p(5,0,BL3);p(6,0,BK);  // ears
-        p(0,1,BL3);p(1,1,BL1);p(2,1,BL2);p(3,1,BL1);p(4,1,BL2);p(5,1,BL1);p(6,1,BL2);p(7,1,BL3);
-        p(1,2,BL2);p(2,2,BK);p(3,2,BL1);p(4,2,BL1);p(5,2,BK);p(6,2,BL2);  // closed eyes
-        p(0,3,BL2);p(1,3,BL1);p(2,3,CR);p(3,3,CR);p(4,3,CR);p(5,3,CR);p(6,3,BL1);p(7,3,BL2);
-        p(-1,4,BK);p(0,4,BL2);p(1,4,CR);p(2,4,CR);p(3,4,CR);p(4,4,CR);p(5,4,CR);p(6,4,CR);p(7,4,BL2);p(8,4,BK);
-        p(-1,5,BL2);p(0,5,BL1);p(1,5,CR);p(2,5,CR);p(3,5,CR);p(4,5,CR);p(5,5,CR);p(6,5,CR);p(7,5,BL1);p(8,5,BL2);
-        p(-1,6,BL3);p(0,6,BL2);p(1,6,BL1);p(2,6,CR);p(3,6,CR);p(4,6,CR);p(5,6,CR);p(6,6,BL1);p(7,6,BL2);p(8,6,BL3);
-        p(0,7,BK);p(1,7,BL2);p(2,7,BL1);p(3,7,BL2);p(4,7,BL2);p(5,7,BL1);p(6,7,BL2);p(7,7,BK);
-        p(-1,4,BL3);p(-1,5,BL3);  // left arm
-        p(8,4,BL3);p(8,5,BL3);    // right arm
-        p(1,8,BK);p(2,8,BL3);p(3,8,BL2);p(5,8,BL2);p(6,8,BL3);p(7,8,BK);
-
-      // ── 11. 이브이 (Eevee) ──
-      } else if (n === "이브이") {
-        const BR1='#D0A060',BR2='#A06020',BR3='#603010',BK='#201000',CR='#FFF0D0';
-        p(1,0,BK);p(2,0,BR3);p(6,0,BR3);p(7,0,BK);  // pointy ears
-        p(1,1,BR2);p(2,1,BR1);p(3,1,BR2);p(5,1,BR2);p(6,1,BR1);p(7,1,BR2);
-        p(2,2,BR3);p(3,2,BR1);p(4,2,BR1);p(5,2,BR1);p(6,2,BR3);
-        p(1,3,BR2);p(2,3,BK);p(3,3,BR1);p(4,3,BR1);p(5,3,BK);p(6,3,BR2);  // eyes
-        p(2,4,BR2);p(3,4,CR);p(4,4,CR);p(5,4,BR2);
-        p(3,5,BK);p(4,5,BR2);
-        p(0,6,CR);p(1,6,CR);p(2,6,CR);p(3,6,BR1);p(4,6,BR1);p(5,6,CR);p(6,6,CR);p(7,6,CR);  // collar
-        p(0,7,CR);p(1,7,BR2);p(2,7,BR1);p(3,7,BR2);p(4,7,BR2);p(5,7,BR1);p(6,7,BR2);p(7,7,CR);
-        p(2,8,BR3);p(3,8,BR2);p(4,8,BR2);p(5,8,BR3);
-        p(2,9,BK);p(3,9,BR3);p(5,9,BR3);p(6,9,BK);
-        p(7,5,CR);p(8,5,CR);p(9,5,CR);p(8,6,BR1);p(9,6,CR);p(8,7,CR);p(9,7,CR);  // bushy tail
-
-      // ── 12. 뮤츠 (Mewtwo) ──
-      } else if (n === "뮤츠") {
-        const GY1='#E0D0F0',GY2='#B090D0',GY3='#7060A0',BK='#200030',PU='#C080FF';
-        p(3,0,PU);p(4,0,PU);  // forehead tube
-        p(1,1,GY3);p(2,1,GY1);p(3,1,GY1);p(4,1,GY1);p(5,1,GY1);p(6,1,GY1);p(7,1,GY3);
-        p(0,2,GY3);p(1,2,GY1);p(2,2,GY1);p(3,2,GY1);p(4,2,GY1);p(5,2,GY1);p(6,2,GY1);p(7,2,GY1);p(8,2,GY3);
-        p(0,3,GY2);p(1,3,GY1);p(2,3,GY1);p(3,3,GY1);p(4,3,GY1);p(5,3,GY1);p(6,3,GY1);p(7,3,GY1);p(8,3,GY2);
-        p(1,4,GY2);p(2,4,PU);p(3,4,GY1);p(4,4,GY1);p(5,4,GY1);p(6,4,PU);p(7,4,GY2);  // eyes
-        p(2,5,GY2);p(3,5,GY1);p(4,5,GY1);p(5,5,GY2);
-        p(2,6,GY3);p(3,6,GY2);p(4,6,GY2);p(5,6,GY3);
-        p(2,7,GY3);p(3,7,GY2);p(4,7,GY2);p(5,7,GY3);
-        p(3,8,BK);p(4,8,GY3);p(5,8,BK);
-        p(3,9,GY3);p(4,9,BK);p(5,9,GY3);
-        p(-1,5,GY2);p(-1,6,GY3);p(8,5,GY2);p(8,6,GY3);  // arms
-        p(7,6,PU);p(8,7,PU);p(8,8,PU);p(9,6,PU);p(9,7,PU);  // tail
-
-      // ── 13. 뮤 (Mew) ──
-      } else if (n === "뮤") {
-        const PK1='#FFD0E0',PK2='#FF90B0',PK3='#E05080',BK='#800030',WT='#FFFFFF';
-        p(1,1,PK3);p(7,1,PK3);  // small ears
-        p(2,1,PK3);p(3,1,PK2);p(4,1,PK2);p(5,1,PK3);
-        p(1,2,PK2);p(2,2,PK1);p(3,2,PK1);p(4,2,PK1);p(5,2,PK1);p(6,2,PK2);
-        p(1,3,PK2);p(2,3,BK);p(3,3,WT);p(4,3,WT);p(5,3,BK);p(6,3,PK2);  // large eyes
-        p(1,4,PK2);p(2,4,BK);p(3,4,BK);p(4,4,BK);p(5,4,BK);p(6,4,PK2);
-        p(2,5,PK2);p(3,5,PK1);p(4,5,PK1);p(5,5,PK2);
-        p(1,6,PK3);p(2,6,PK2);p(3,6,PK1);p(4,6,PK1);p(5,6,PK2);p(6,6,PK3);
-        p(2,7,PK2);p(3,7,PK2);p(4,7,PK2);p(5,7,PK2);
-        p(3,8,BK);p(4,8,BK);
-        p(6,6,PK3);p(7,6,PK2);p(8,6,PK3);p(8,5,PK2);p(9,5,PK3);p(9,4,PK2);  // long tail
-
-      // ── 14. 푸린 (Jigglypuff) ──
-      } else if (n === "푸린") {
-        const PK1='#FFB0C8',PK2='#FF7090',PK3='#E04060',BK='#500020',EY='#60C0B0',WT='#FFFFFF';
-        p(3,0,PK3);p(4,0,PK2);  // forehead curl
-        p(2,1,PK2);p(3,1,PK1);p(4,1,PK1);p(5,1,PK2);
-        p(1,2,PK2);p(2,2,EY);p(3,2,WT);p(4,2,EY);p(5,2,WT);p(6,2,PK2);  // large teal eyes
-        p(1,3,PK2);p(2,3,EY);p(3,3,EY);p(4,3,EY);p(5,3,EY);p(6,3,PK2);
-        p(1,4,PK2);p(2,4,PK1);p(3,4,PK1);p(4,4,PK1);p(5,4,PK1);p(6,4,PK2);
-        p(3,5,BK);p(4,5,PK2);
-        p(0,6,PK3);p(1,6,PK2);p(2,6,PK1);p(3,6,PK1);p(4,6,PK1);p(5,6,PK1);p(6,6,PK2);p(7,6,PK3);
-        p(1,7,PK2);p(2,7,PK1);p(3,7,PK1);p(4,7,PK1);p(5,7,PK1);p(6,7,PK2);
-        p(2,8,PK3);p(3,8,PK2);p(4,8,PK2);p(5,8,PK3);
-        p(0,7,PK2);p(7,7,PK2);  // tiny arms
-
-      // ── 15. 망나뇽 (Dragonite) ──
-      } else if (n === "망나뇽") {
-        const O1='#FFE090',O2='#FFA020',O3='#C06010',BK='#3D1500',CR='#C0E8F0',GN='#40A050';
-        p(3,0,O3);p(5,0,O3);  // antennae
-        p(2,1,O2);p(3,1,O3);p(4,1,O2);p(5,1,O3);p(6,1,O2);
-        p(1,2,O3);p(2,2,O1);p(3,2,O2);p(4,2,O2);p(5,2,O2);p(6,2,O1);p(7,2,O3);
-        p(1,3,O2);p(2,3,BK);p(3,3,O1);p(4,3,O2);p(5,3,O1);p(6,3,BK);p(7,3,O2);  // eyes
-        p(1,4,O2);p(2,4,O1);p(3,4,CR);p(4,4,CR);p(5,4,O1);p(6,4,O2);
-        p(1,5,O3);p(2,5,O2);p(3,5,O1);p(4,5,O1);p(5,5,O2);p(6,5,O3);
-        p(1,6,O3);p(2,6,O2);p(3,6,CR);p(4,6,CR);p(5,6,O2);p(6,6,O3);
-        p(2,7,O3);p(3,7,O2);p(4,7,O2);p(5,7,O3);
-        p(2,8,BK);p(3,8,O3);p(5,8,O3);p(6,8,BK);
-        p(-1,4,GN);p(-1,5,GN);p(0,5,GN);  // left wing
-        p(8,4,GN);p(8,5,GN);p(9,5,GN);    // right wing
-
-      // ── 16. 이상해꽃 (Venusaur) ──
-      } else if (n === "이상해꽃") {
-        const G1='#80C080',G2='#408050',G3='#205030',BK='#102010',PK='#FF8080',RD='#CC2040',YW='#F0E020';
-        p(2,0,PK);p(3,0,RD);p(4,0,RD);p(5,0,PK);  // flower
-        p(1,1,PK);p(2,1,PK);p(3,1,YW);p(4,1,YW);p(5,1,PK);p(6,1,PK);
-        p(2,2,G2);p(3,2,YW);p(4,2,YW);p(5,2,G2);
-        p(1,3,G2);p(2,3,G1);p(3,3,G2);p(4,3,G2);p(5,3,G1);p(6,3,G2);
-        p(0,4,BK);p(1,4,G1);p(2,4,BK);p(3,4,G1);p(4,4,G1);p(5,4,BK);p(6,4,G1);p(7,4,BK);  // eyes
-        p(0,5,G2);p(1,5,G1);p(2,5,G2);p(3,5,G1);p(4,5,G1);p(5,5,G2);p(6,5,G1);p(7,5,G2);
-        p(-1,6,G3);p(0,6,G2);p(1,6,G1);p(2,6,G1);p(3,6,G1);p(4,6,G1);p(5,6,G1);p(6,6,G2);p(7,6,G3);
-        p(-1,7,G3);p(0,7,G2);p(1,7,G2);p(2,7,G2);p(3,7,G2);p(4,7,G2);p(5,7,G2);p(6,7,G3);
-        p(0,8,BK);p(1,8,G3);p(2,8,G2);p(3,8,BK);p(5,8,BK);p(6,8,G2);p(7,8,G3);p(8,8,BK);
-        p(0,9,G3);p(1,9,BK);p(2,9,G3);p(6,9,G3);p(7,9,BK);p(8,9,G3);
-
-      // ── 17. 후딘 (Alakazam) ──
-      } else if (n === "후딘") {
-        const Y1='#FFF0B0',Y2='#E0C040',Y3='#A08020',BK='#302000',GY='#C0C0C0',BR='#C08040';
-        p(3,0,BK);p(4,0,Y2);p(5,0,BK);
-        p(2,1,Y3);p(3,1,Y1);p(4,1,Y1);p(5,1,Y1);p(6,1,Y3);
-        p(1,2,Y2);p(2,2,BK);p(3,2,Y1);p(4,2,Y1);p(5,2,BK);p(6,2,Y2);  // eyes
-        p(1,3,Y2);p(2,3,Y1);p(3,3,Y2);p(4,3,Y2);p(5,3,Y1);p(6,3,Y2);
-        p(0,4,Y1);p(1,4,Y2);p(2,4,BR);p(3,4,Y2);p(4,4,BR);p(5,4,Y2);p(6,4,Y1);p(7,4,Y1);  // mustache
-        p(2,5,BR);p(3,5,Y1);p(4,5,Y1);p(5,5,BR);
-        p(2,6,BR);p(3,6,Y2);p(4,6,Y2);p(5,6,BR);
-        p(3,7,Y3);p(4,7,Y3);
-        p(3,8,BK);p(4,8,Y3);p(5,8,BK);
-        p(3,9,Y3);p(4,9,BK);p(5,9,Y3);
-        p(0,5,GY);p(0,6,GY);p(-1,7,GY);  // left spoon
-        p(7,5,GY);p(7,6,GY);p(8,7,GY);   // right spoon
-
-      // ── 18. 찌리리공 (Electrode) ──
-      } else if (n === "찌리리공") {
-        const WT='#FFFFFF',WG='#D0D0D0',RD='#CC2020',DR='#881010',BK='#101010',PK='#FF8090';
-        p(2,1,WG);p(3,1,WT);p(4,1,WT);p(5,1,WG);
-        p(1,2,WT);p(2,2,WT);p(3,2,WT);p(4,2,WT);p(5,2,WT);p(6,2,WT);
-        p(2,2,BK);p(3,2,WT);p(5,2,BK);p(6,2,WT);  // angry eyebrows
-        p(0,3,BK);p(1,3,BK);p(2,3,BK);p(3,3,BK);p(4,3,BK);p(5,3,BK);p(6,3,BK);p(7,3,BK);  // divider
-        p(1,4,RD);p(2,4,RD);p(3,4,RD);p(4,4,RD);p(5,4,RD);p(6,4,RD);
-        p(1,5,DR);p(2,5,BK);p(3,5,PK);p(4,5,PK);p(5,5,BK);p(6,5,DR);  // grin
-        p(1,6,RD);p(2,6,DR);p(3,6,DR);p(4,6,DR);p(5,6,DR);p(6,6,RD);
-        p(2,7,DR);p(3,7,RD);p(4,7,RD);p(5,7,DR);
-        p(3,8,DR);p(4,8,DR);
-
-      // ── 19. 식스테일 (Vulpix) ──
-      } else if (n === "식스테일") {
-        const R1='#E09050',R2='#B05020',R3='#703010',BK='#201000',CR='#FFE0B0';
-        p(2,0,R3);p(3,0,R2);p(5,0,R2);p(6,0,R3);  // ears
-        p(2,1,R2);p(3,1,R1);p(5,1,R1);p(6,1,R2);
-        p(1,2,R3);p(2,2,R1);p(3,2,R1);p(4,2,R1);p(5,2,R1);p(6,2,R3);
-        p(1,3,R2);p(2,3,BK);p(3,3,R1);p(4,3,R1);p(5,3,BK);p(6,3,R2);  // eyes
-        p(2,4,R2);p(3,4,CR);p(4,4,CR);p(5,4,R2);
-        p(3,5,BK);p(4,5,R2);
-        p(1,5,R3);p(2,5,R1);p(3,5,R1);p(4,5,R1);p(5,5,R2);p(6,5,R3);
-        p(2,6,R2);p(3,6,R1);p(4,6,R1);p(5,6,R2);
-        p(2,7,BK);p(3,7,R3);p(5,7,R3);p(6,7,BK);
-        p(7,4,CR);p(8,4,R1);p(9,4,CR);p(7,5,R1);p(8,5,CR);p(9,5,R1);  // curled tails
-        p(7,6,CR);p(8,6,R1);p(9,6,CR);p(7,7,R2);p(8,7,CR);p(9,7,R2);
-
-      // ── 20. 가디 (Growlithe) ──
-      } else if (n === "가디") {
-        const O1='#FFC060',O2='#E87020',O3='#A04A10',BK='#200800',CR='#FFF8E0',ST='#3D2000';
-        p(2,0,O3);p(3,0,O2);p(5,0,O2);p(6,0,O3);  // ears
-        p(2,1,O2);p(3,1,O1);p(5,1,O1);p(6,1,O2);
-        p(1,2,ST);p(2,2,O1);p(3,2,O1);p(4,2,O1);p(5,2,O1);p(6,2,O1);p(7,2,ST);  // stripe
-        p(1,3,O2);p(2,3,BK);p(3,3,O1);p(4,3,O2);p(5,3,BK);p(6,3,O1);p(7,3,ST);  // eyes
-        p(2,4,O2);p(3,4,CR);p(4,4,CR);p(5,4,O2);
-        p(3,5,BK);p(4,5,O2);
-        p(0,5,ST);p(1,5,O1);p(2,5,CR);p(3,5,CR);p(4,5,CR);p(5,5,CR);p(6,5,O1);p(7,5,ST);
-        p(0,6,O2);p(1,6,O1);p(2,6,ST);p(3,6,O1);p(4,6,O1);p(5,6,ST);p(6,6,O1);p(7,6,O2);
-        p(1,7,O3);p(2,7,O2);p(5,7,O2);p(6,7,O3);
-        p(1,8,BK);p(2,8,O3);p(3,8,BK);p(5,8,BK);p(6,8,O3);p(7,8,BK);
-        p(8,4,CR);p(9,4,CR);p(8,5,O1);p(9,5,CR);p(8,3,CR);  // fluffy tail
-      }
+      const img = bossImgs.current[mon.name];
+      if (img && img.complete && img.naturalWidth > 0) {
+        const size = 108;
+        ctx.drawImage(img, -size / 2, -size / 2, size, size);
 
       // ── crown ──
       ctx.fillStyle = '#FFD700';
@@ -1351,7 +1043,15 @@ export default function WildCatch() {
       }
       ctx.shadowBlur = 0;
       ctx.restore();
+      return;
+      }
+
+      // ── fallback: 이미지 미로드시 빈 원 표시 ──
+      ctx.beginPath(); ctx.arc(0, 0, 40, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,255,255,0.15)"; ctx.fill();
+      ctx.restore();
     }
+
 
     // ── particles ──
     function spawnParticles(x, y, ok) {
