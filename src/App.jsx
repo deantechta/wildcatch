@@ -1354,8 +1354,8 @@ export default function WildCatch() {
             if (spd > 4) { mon.vx = (mon.vx / spd) * 4; mon.vy = (mon.vy / spd) * 4; }
           }
 
-          // 도망 AI: Lv5+ 몬스터가 볼 날아오면 반대 방향으로
-          if (mon.level >= 5 && s.ball.active) {
+          // 도망 AI: Lv8+ 몬스터가 볼 날아오면 반대 방향으로
+          if (mon.level >= 8 && s.ball.active) {
             const dx = s.ball.x - mon.x;
             mon.vx = Math.abs(mon.vx) * (dx > 0 ? -1 : 1);
           }
@@ -1370,15 +1370,15 @@ export default function WildCatch() {
             }
           } else if (mon.pattern === "jump") {
             mon.jumpPhase = (mon.jumpPhase || 0) + 1;
-            if (mon.jumpPhase % 90 === 0) {
-              mon.vy = -Math.abs(mon.vy || 1) * 2.5;
+            if (mon.jumpPhase % 150 === 0) {
+              mon.vy = -Math.abs(mon.vy || 1) * 1.4;
             }
             mon.x += mon.vx * slowFactor;
             mon.y += mon.vy * slowFactor;
             mon.vy += 0.08; // gravity
           } else if (mon.pattern === "zigzag") {
             mon.zigzagTimer = (mon.zigzagTimer || 0) + 1;
-            if (mon.zigzagTimer % 25 === 0) mon.vx *= -1;
+            if (mon.zigzagTimer % 55 === 0) mon.vx *= -1;
             mon.x += mon.vx * slowFactor;
             mon.y += mon.vy * slowFactor;
           } else {
