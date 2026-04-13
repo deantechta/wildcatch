@@ -124,7 +124,7 @@ const MONSTERS = [
 const BOSS_MONSTERS = [
   { name: "피카추" },   { name: "라이추" },   { name: "파이리" },   { name: "꼬부기" },
   { name: "거북왕" },   { name: "팬텀" },     { name: "이상해씨" }, { name: "리자몽" },
-  { name: "리자드" },   { name: "잠만보" },
+  { name: "잠만보" },   { name: "메타몽" },
   { name: "이브이" },   { name: "뮤츠" },     { name: "뮤" },       { name: "푸린" },
   { name: "망나뇽" },   { name: "이상해꽃" }, { name: "후딘" },     { name: "찌리리공" },
   { name: "식스테일" }, { name: "가디" },
