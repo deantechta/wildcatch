@@ -2313,42 +2313,50 @@ function StatBox({ label, value, sub, color }) {
 function DifficultyModal({ onSelect }) {
   return (
     <div style={{
-      position: "absolute", inset: 0,
+      position: "fixed", inset: 0,
       background: "rgba(4,9,22,0.97)",
       display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "center",
-      borderRadius: 8, zIndex: 30,
+      zIndex: 9999, overflowY: "auto",
     }}>
-      <div style={{ fontSize: 36, marginBottom: 6 }}>🌟 준이 캐치 🌟</div>
-      <div style={{ color: "#aaa", fontSize: 13, marginBottom: 28 }}>난이도를 선택하세요</div>
+      <div style={{ fontSize: 32, marginBottom: 4 }}>🌟 준이 캐치 🌟</div>
+      <div style={{ color: "#aaa", fontSize: 13, marginBottom: 24, fontFamily: "'Noto Sans KR', monospace" }}>난이도를 선택하세요</div>
 
       {/* EASY */}
-      <button onClick={() => onSelect("easy")} style={{
-        width: 220, padding: "18px 0", marginBottom: 16,
-        background: "linear-gradient(135deg,#1b5e20,#43a047)",
-        border: "2px solid #66bb6a", borderRadius: 12,
-        color: "#fff", cursor: "pointer",
-        boxShadow: "0 0 20px #43a04766",
-        display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-      }}>
-        <span style={{ fontSize: 28 }}>🌱</span>
+      <button
+        onPointerDown={(e) => { e.preventDefault(); onSelect("easy"); }}
+        style={{
+          width: "min(240px, 80vw)", padding: "16px 0", marginBottom: 16,
+          background: "linear-gradient(135deg,#1b5e20,#43a047)",
+          border: "2px solid #66bb6a", borderRadius: 12,
+          color: "#fff", cursor: "pointer",
+          boxShadow: "0 0 20px #43a04766",
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+          touchAction: "manipulation", WebkitTapHighlightColor: "transparent",
+          fontFamily: "'Noto Sans KR', monospace",
+        }}>
+        <span style={{ fontSize: 26 }}>🌱</span>
         <span style={{ fontSize: 20, fontWeight: "bold", letterSpacing: 2 }}>EASY</span>
-        <span style={{ fontSize: 11, color: "#c8e6c9", marginTop: 4 }}>몬스터가 느리고 순해요</span>
+        <span style={{ fontSize: 11, color: "#c8e6c9", marginTop: 2 }}>몬스터가 느리고 순해요</span>
         <span style={{ fontSize: 10, color: "#a5d6a7" }}>속도 50% · 회피 50% 감소</span>
       </button>
 
       {/* HARD */}
-      <button onClick={() => onSelect("hard")} style={{
-        width: 220, padding: "18px 0",
-        background: "linear-gradient(135deg,#b71c1c,#e53935)",
-        border: "2px solid #ef5350", borderRadius: 12,
-        color: "#fff", cursor: "pointer",
-        boxShadow: "0 0 20px #e5393566",
-        display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-      }}>
-        <span style={{ fontSize: 28 }}>💀</span>
+      <button
+        onPointerDown={(e) => { e.preventDefault(); onSelect("hard"); }}
+        style={{
+          width: "min(240px, 80vw)", padding: "16px 0",
+          background: "linear-gradient(135deg,#b71c1c,#e53935)",
+          border: "2px solid #ef5350", borderRadius: 12,
+          color: "#fff", cursor: "pointer",
+          boxShadow: "0 0 20px #e5393566",
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+          touchAction: "manipulation", WebkitTapHighlightColor: "transparent",
+          fontFamily: "'Noto Sans KR', monospace",
+        }}>
+        <span style={{ fontSize: 26 }}>💀</span>
         <span style={{ fontSize: 20, fontWeight: "bold", letterSpacing: 2 }}>HARD</span>
-        <span style={{ fontSize: 11, color: "#ffcdd2", marginTop: 4 }}>기본 난이도로 도전!</span>
+        <span style={{ fontSize: 11, color: "#ffcdd2", marginTop: 2 }}>기본 난이도로 도전!</span>
         <span style={{ fontSize: 10, color: "#ef9a9a" }}>몬스터가 빠르고 영리해요</span>
       </button>
     </div>
@@ -2489,10 +2497,10 @@ function RulesModal({ onClose }) {
 
   return (
     <div style={{
-      position: "absolute", inset: 0,
-      background: "rgba(4,9,22,0.96)",
+      position: "fixed", inset: 0,
+      background: "rgba(4,9,22,0.97)",
       display: "flex", alignItems: "flex-start", justifyContent: "center",
-      borderRadius: 8, zIndex: 20, overflowY: "auto",
+      zIndex: 9999, overflowY: "auto",
       padding: "16px 0",
     }}>
       <div style={{
@@ -2551,10 +2559,10 @@ function GameOverModal({ ui, playTime, onRestart }) {
   const fmt = s => `${String(Math.floor(s/3600)).padStart(2,"0")}:${String(Math.floor((s%3600)/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
   return (
     <div style={{
-      position: "absolute", inset: 0,
-      background: "rgba(4,0,0,0.92)",
+      position: "fixed", inset: 0,
+      background: "rgba(4,0,0,0.95)",
       display: "flex", alignItems: "center", justifyContent: "center",
-      borderRadius: 8, zIndex: 20,
+      zIndex: 9999,
     }}>
       <div style={{
         background: "linear-gradient(135deg, #1A0000, #2D0A0A)",
@@ -2615,10 +2623,10 @@ function ResultModal({ ui, playTime, onClose }) {
   ];
   return (
     <div style={{
-      position: "absolute", inset: 0,
-      background: "rgba(4,9,22,0.94)",
+      position: "fixed", inset: 0,
+      background: "rgba(4,9,22,0.97)",
       display: "flex", alignItems: "center", justifyContent: "center",
-      borderRadius: 8, zIndex: 20,
+      zIndex: 9999,
     }}>
       <div style={{
         background: "linear-gradient(135deg, #0D1E3D, #1A2744)",
@@ -2669,52 +2677,34 @@ function QuizModal({ quiz, onAnswer }) {
 
   return (
     <div style={{
-      position: "absolute", inset: 0,
-      background: "rgba(4,9,22,0.92)",
+      position: "fixed", inset: 0,
+      background: "rgba(4,9,22,0.97)",
       display: "flex", alignItems: "center", justifyContent: "center",
-      borderRadius: 8, zIndex: 10,
+      zIndex: 9999,
+      touchAction: "none",
     }}>
       <div style={{
         background: "linear-gradient(135deg, #0D1E3D, #1A2744)",
         border: `2px solid ${opColor}77`,
-        borderRadius: 16, padding: "24px 28px",
-        textAlign: "center", width: 260,
+        borderRadius: 16, padding: "20px 20px",
+        textAlign: "center", width: "min(300px, 90vw)",
         boxShadow: `0 0 40px ${opColor}44`,
         fontFamily: "'Noto Sans KR', monospace",
       }}>
-        <div style={{ fontSize: 11, color: opColor, marginBottom: 6, letterSpacing: 1 }}>
+        <div style={{ fontSize: 11, color: opColor, marginBottom: 4, letterSpacing: 1 }}>
           🧮 퀴즈 타임!
         </div>
-        <div style={{ fontSize: 10, color: "#90A4AE", marginBottom: 16 }}>
+        <div style={{ fontSize: 10, color: "#90A4AE", marginBottom: 12 }}>
           5마리 포획 달성! 정답을 맞춰야 계속할 수 있어요
         </div>
 
         <div style={{
           fontSize: 36, color: "white", fontWeight: "bold",
-          marginBottom: 16, letterSpacing: 4,
+          marginBottom: 14, letterSpacing: 4,
           textShadow: `0 0 20px ${opColor}88`,
         }}>
           {quiz.a} <span style={{ color: opColor }}>{quiz.op}</span> {quiz.b} = ?
         </div>
-
-        {/* 키보드 입력 */}
-        <input
-          type="number"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && submit()}
-          autoFocus
-          style={{
-            width: "100%", padding: "9px 0",
-            fontSize: 24, textAlign: "center",
-            background: "rgba(255,255,255,0.08)",
-            border: quiz.wrong ? "2px solid #FF5252" : `2px solid ${opColor}88`,
-            borderRadius: 8, color: "white",
-            outline: "none", marginBottom: 8,
-            fontFamily: "monospace", boxSizing: "border-box",
-          }}
-          placeholder="?"
-        />
 
         {quiz.wrong && (
           <div style={{
@@ -2725,21 +2715,59 @@ function QuizModal({ quiz, onAnswer }) {
           </div>
         )}
 
-        {/* 4지선다 */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 0 }}>
+        {/* 4지선다 — onPointerDown으로 모바일 300ms 딜레이 제거 */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
           {quiz.choices.map(n => (
-            <button key={n} onClick={() => onAnswer(n)} style={{
-              padding: "13px 0", fontSize: 20, fontWeight: "bold",
-              background: quiz.wrong && n === quiz.answer
-                ? "rgba(105,240,174,0.18)" : "rgba(255,255,255,0.07)",
-              border: quiz.wrong && n === quiz.answer
-                ? "2px solid #69F0AE" : "2px solid rgba(255,255,255,0.15)",
-              borderRadius: 10, color: "#E8EAF6", cursor: "pointer",
-              fontFamily: "monospace", transition: "background 0.15s",
-            }}>
+            <button
+              key={n}
+              onPointerDown={(e) => { e.preventDefault(); onAnswer(n); }}
+              style={{
+                padding: "16px 0", fontSize: 22, fontWeight: "bold",
+                background: quiz.wrong && n === quiz.answer
+                  ? "rgba(105,240,174,0.25)" : "rgba(255,255,255,0.10)",
+                border: quiz.wrong && n === quiz.answer
+                  ? "2px solid #69F0AE" : `2px solid ${opColor}55`,
+                borderRadius: 12, color: "#E8EAF6", cursor: "pointer",
+                fontFamily: "monospace",
+                touchAction: "manipulation",
+                WebkitTapHighlightColor: "transparent",
+                userSelect: "none", WebkitUserSelect: "none",
+              }}
+            >
               {n}
             </button>
           ))}
+        </div>
+
+        {/* 키보드 직접 입력 (선택사항) */}
+        <div style={{ display: "flex", gap: 6 }}>
+          <input
+            type="number"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && submit()}
+            style={{
+              flex: 1, padding: "8px 0",
+              fontSize: 18, textAlign: "center",
+              background: "rgba(255,255,255,0.08)",
+              border: quiz.wrong ? "2px solid #FF5252" : `2px solid ${opColor}44`,
+              borderRadius: 8, color: "white",
+              outline: "none",
+              fontFamily: "monospace", boxSizing: "border-box",
+            }}
+            placeholder="직접 입력"
+          />
+          <button
+            onPointerDown={(e) => { e.preventDefault(); submit(); }}
+            style={{
+              padding: "8px 14px", fontSize: 13, fontWeight: "bold",
+              background: `${opColor}33`, border: `2px solid ${opColor}88`,
+              borderRadius: 8, color: opColor, cursor: "pointer",
+              fontFamily: "monospace",
+              touchAction: "manipulation",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >확인</button>
         </div>
       </div>
     </div>
