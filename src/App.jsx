@@ -188,6 +188,15 @@ function spawnMonster(ballLvl, charLvl = 1, special = false) {
   const speed = baseSpeed * speedMult * (special ? 1.3 : 1);
   const candidates = MONSTERS.filter(m => m.level === lvl);
   const template = candidates[Math.floor(Math.random() * candidates.length)];
+
+  // 행동 패턴 결정 (special/boss는 normal 고정)
+  let pattern = "normal";
+  if (!special) {
+    if (lvl <= 3 && Math.random() < 0.35) pattern = "sleepy";
+    else if (lvl >= 3 && lvl <= 6 && Math.random() < 0.40) pattern = "jump";
+    else if (lvl >= 7 && Math.random() < 0.40) pattern = "zigzag";
+  }
+
   return {
     ...template,
     special,
@@ -195,6 +204,13 @@ function spawnMonster(ballLvl, charLvl = 1, special = false) {
     y: 35 + Math.random() * (GROUND_Y * 0.50),
     vx: (Math.random() > 0.5 ? 1 : -1) * speed,
     vy: (Math.random() > 0.5 ? 0.5 : -0.5) * speed * 0.55,
+    pattern,        // "normal" | "sleepy" | "jump" | "zigzag"
+    sleepTimer: 0,  // sleepy: 누적 프레임
+    sleeping: false,
+    jumpPhase: 0,   // jump: 프레임 카운터
+    zigzagTimer: 0, // zigzag: 방향 전환 카운터
+    hp: 1,          // 보스는 나중에 2로 세팅
+    boss: false,
   };
 }
 
@@ -232,6 +248,12 @@ export default function WildCatch() {
     goldenBall: false,
     paused: false,
     dangerTimer: 0, // 시간 초과 탈출 후 10초 게임오버 카운트다운
+    shield: false,        // 방패 아이템: 다음 miss 1회 무효
+    flashTimer: 0,        // 포획 성공 화면 플래시
+    comboPopTimer: 0,     // 콤보 팝업 타이머
+    comboPopValue: 0,     // 팝업에 표시할 콤보 값
+    goldenTime: false,    // 골든 타임 활성
+    goldenTimeTimer: 0,   // 남은 프레임 (1800 = 30초)
   });
 
   const [ui, setUi] = useState({
@@ -536,8 +558,20 @@ export default function WildCatch() {
       const isGolden = s.ball.golden;
       const c = isGolden ? "#FFD700" : BALL_COLORS[s.ballLvl - 1];
 
-      // golden outer sparkle
+      // golden outer sparkle + rainbow trail
       if (isGolden) {
+        // 무지개 궤적
+        if (s.ball.rainbowTrail && s.ball.rainbowTrail.length > 0) {
+          s.ball.rainbowTrail.forEach((pt, i) => {
+            const alpha = (i / s.ball.rainbowTrail.length) * 0.55;
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = `hsl(${(Date.now() * 0.3 + i * 30) % 360}, 100%, 65%)`;
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, BALL_R * (0.3 + i / s.ball.rainbowTrail.length * 0.5), 0, Math.PI * 2);
+            ctx.fill();
+          });
+          ctx.globalAlpha = 1;
+        }
         ctx.shadowColor = "#FFD700"; ctx.shadowBlur = 24;
         for (let i = 0; i < 6; i++) {
           const a = Date.now() * 0.006 + (i / 6) * Math.PI * 2;
@@ -577,63 +611,98 @@ export default function WildCatch() {
     function drawItem(item) {
       const { x, y, type, timer } = item;
       const ratio = timer / 300;
-      const isSpeed = type === "speed";
-      const color = isSpeed ? "#FFD700" : "#00BCD4";
-      const icon  = isSpeed ? "⚡" : "🐌";
-      const label = isSpeed ? "빠르게!" : "느리게!";
+      const ITEM_CFG = {
+        speed:     { icon: "⚡", label: "빠르게!", color: "#FFD700", bg: "rgba(255,215,0,0.22)" },
+        slow:      { icon: "🐌", label: "느리게!", color: "#00BCD4", bg: "rgba(0,188,212,0.22)" },
+        magnet:    { icon: "🧲", label: "자석!",   color: "#FF4081", bg: "rgba(255,64,129,0.22)" },
+        shield:    { icon: "🛡️", label: "방패!",   color: "#69F0AE", bg: "rgba(105,240,174,0.22)" },
+        timeplus:  { icon: "⏰", label: "시간+10!", color: "#FF9800", bg: "rgba(255,152,0,0.22)" },
+        autoCatch: { icon: "🎫", label: "뽑기권!", color: "#E040FB", bg: "rgba(224,64,251,0.22)" },
+      };
+      const cfg = ITEM_CFG[type] || ITEM_CFG.speed;
+
+      // 외부 pulse ring
+      const pulseR = 32 + 4 * Math.sin(Date.now() * 0.008);
+      ctx.shadowColor = cfg.color; ctx.shadowBlur = 28;
+      ctx.strokeStyle = cfg.color + "BB"; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(x, y, pulseR, 0, Math.PI * 2); ctx.stroke();
+      ctx.shadowBlur = 0; ctx.lineWidth = 1;
 
       // countdown arc
-      ctx.shadowColor = color; ctx.shadowBlur = 16;
-      ctx.strokeStyle = color; ctx.lineWidth = 3;
+      ctx.strokeStyle = cfg.color; ctx.lineWidth = 4;
+      ctx.shadowColor = cfg.color; ctx.shadowBlur = 14;
       ctx.beginPath();
-      ctx.arc(x, y, 22, -Math.PI / 2, -Math.PI / 2 + ratio * Math.PI * 2);
+      ctx.arc(x, y, pulseR, -Math.PI / 2, -Math.PI / 2 + ratio * Math.PI * 2);
       ctx.stroke();
       ctx.shadowBlur = 0; ctx.lineWidth = 1;
 
       // background circle
-      ctx.fillStyle = isSpeed ? "rgba(255,215,0,0.18)" : "rgba(0,188,212,0.18)";
-      ctx.beginPath(); ctx.arc(x, y, 18, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = color + "BB"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(x, y, 18, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = cfg.bg;
+      ctx.beginPath(); ctx.arc(x, y, 26, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = cfg.color + "CC"; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(x, y, 26, 0, Math.PI * 2); ctx.stroke();
       ctx.lineWidth = 1;
 
-      // icon
-      ctx.font = "15px serif";
+      // icon (크게)
+      ctx.font = "22px serif";
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(icon, x, y);
+      ctx.fillText(cfg.icon, x, y);
 
-      // label + seconds
-      ctx.fillStyle = color;
-      ctx.font = "bold 7px 'Noto Sans KR', monospace";
-      ctx.fillText(label, x, y + 30);
-      ctx.fillStyle = "rgba(255,255,255,0.8)";
-      ctx.font = "bold 8px monospace";
-      ctx.fillText(Math.ceil(timer / 60) + "s", x, y - 28);
+      // label
+      ctx.fillStyle = cfg.color;
+      ctx.font = "bold 9px 'Noto Sans KR', monospace";
+      ctx.textBaseline = "top";
+      ctx.shadowColor = cfg.color; ctx.shadowBlur = 8;
+      ctx.fillText(cfg.label, x, y + 32);
+      ctx.shadowBlur = 0;
+
+      // 초 카운트
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.font = "bold 9px monospace";
+      ctx.textBaseline = "bottom";
+      ctx.fillText(Math.ceil(timer / 60) + "s", x, y - 34);
     }
 
     // ── draw active effect HUD ──
     function drawEffectHud() {
       if (!s.effect) return;
-      const isSpeed = s.effect.type === "speed";
-      const color = isSpeed ? "#FFD700" : "#00BCD4";
-      const icon  = isSpeed ? "⚡" : "🐌";
-      const label = isSpeed ? "빠르게" : "느리게";
-      const secs  = Math.ceil(s.effect.timer / 60);
+      const EFFECT_MAP = {
+        speed:  { color: "#FFD700", icon: "⚡", label: "빠르게" },
+        slow:   { color: "#00BCD4", icon: "🐌", label: "느리게" },
+        magnet: { color: "#FF4081", icon: "🧲", label: "자석" },
+      };
+      const m = EFFECT_MAP[s.effect.type];
+      if (!m) return;
+      const secs = Math.ceil(s.effect.timer / 60);
 
-      ctx.fillStyle = isSpeed ? "rgba(255,215,0,0.15)" : "rgba(0,188,212,0.15)";
-      ctx.strokeStyle = color + "99";
+      ctx.fillStyle = m.color + "26";
+      ctx.strokeStyle = m.color + "99";
       ctx.lineWidth = 1.5;
-      roundRect(ctx, GW - 76, 6, 68, 22, 6);
-      ctx.fill(); ctx.stroke();
-      ctx.lineWidth = 1;
+      roundRect(ctx, GW - 84, 6, 76, 22, 6);
+      ctx.fill(); ctx.stroke(); ctx.lineWidth = 1;
 
       ctx.font = "10px serif";
       ctx.textAlign = "left"; ctx.textBaseline = "middle";
-      ctx.fillText(icon, GW - 70, 17);
-      ctx.fillStyle = color;
+      ctx.fillText(m.icon, GW - 78, 17);
+      ctx.fillStyle = m.color;
       ctx.font = "bold 8px monospace";
-      ctx.textAlign = "left";
-      ctx.fillText(`${label} ${secs}s`, GW - 57, 17);
+      ctx.fillText(`${m.label} ${secs}s`, GW - 65, 17);
+    }
+
+    // ── draw shield HUD ──
+    function drawShieldHud() {
+      if (!s.shield) return;
+      ctx.fillStyle = "rgba(105,240,174,0.15)";
+      ctx.strokeStyle = "#69F0AE99";
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, GW - 84, 32, 76, 22, 6);
+      ctx.fill(); ctx.stroke(); ctx.lineWidth = 1;
+      ctx.font = "10px serif";
+      ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText("🛡️", GW - 78, 43);
+      ctx.fillStyle = "#69F0AE";
+      ctx.font = "bold 8px monospace";
+      ctx.fillText("방패 대기", GW - 63, 43);
     }
 
     function roundRect(c, x, y, w, h, r) {
@@ -712,9 +781,31 @@ export default function WildCatch() {
       ctx.beginPath(); ctx.ellipse(mx, my + MON_R + 4, MON_R * 0.8, MON_R * 0.2, 0, 0, Math.PI * 2); ctx.fill();
 
       ctx.shadowBlur = 0;
-      ctx.font = "42px serif";
+      // 보스: 크기 2배
+      const emojiSize = mon.boss ? 72 : 42;
+      ctx.font = `${emojiSize}px serif`;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(mon.emoji, mx, my);
+
+      // 보스 HP 표시
+      if (mon.boss) {
+        ctx.fillStyle = "#FF5252";
+        ctx.font = "bold 12px monospace";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.shadowColor = "#FF5252"; ctx.shadowBlur = 10;
+        ctx.fillText(`HP ${"❤️".repeat(mon.hp)}`, mx, my - MON_R - 22);
+        ctx.shadowBlur = 0;
+      }
+
+      // 졸음형: 잠든 상태 Zzz 표시
+      if (mon.pattern === "sleepy" && mon.sleeping) {
+        ctx.globalAlpha = 0.7;
+        ctx.fillStyle = "#B0BEC5";
+        ctx.font = "12px serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText("Zzz", mx + MON_R + 6, my - MON_R - 6);
+        ctx.globalAlpha = 1;
+      }
 
       // Level badge
       const badgeX = mx + MON_R - 1, badgeY = my - MON_R + 1;
@@ -809,21 +900,95 @@ export default function WildCatch() {
       s.levelUpTimer = 180; // ~3 seconds of aura
     }
 
+    // 몬스터별 전용 파티클
+    function spawnMonsterParticles(mon) {
+      const emojiParts = {
+        "🐯": ["🐾","🐾","💥"], "🦁": ["⭐","💛","🦁"],
+        "🦋": ["🌸","🌺","🌸"], "🐉": ["🔥","🔥","💥"],
+        "🌟": ["✨","⭐","💫"], "🦄": ["🌈","💜","⭐"],
+        "🐊": ["💧","🌿","💚"], "⚡": ["💛","⚡","✨"],
+        "🔥": ["🔥","💥","❤️"], "🌊": ["💧","🔵","💙"],
+      };
+      const emojiList = emojiParts[mon.emoji];
+      const fallbackCols = ["#FFD700","#69F0AE","#FF80AB","#FFFF8D"];
+      for (let i = 0; i < 18; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const sp = 1.5 + Math.random() * 4;
+        s.particles.push({
+          x: mon.x, y: mon.y,
+          vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1.2,
+          r: emojiList ? 12 : 3 + Math.random() * 4,
+          color: emojiList ? null : fallbackCols[Math.floor(Math.random() * fallbackCols.length)],
+          emoji: emojiList ? emojiList[Math.floor(Math.random() * emojiList.length)] : null,
+          life: 40 + Math.random() * 20, maxLife: 60,
+        });
+      }
+    }
+
     function drawParticles() {
       s.particles = s.particles.filter(p => p.life > 0);
       s.particles.forEach(p => {
         ctx.globalAlpha = p.life / p.maxLife;
-        ctx.fillStyle = p.color;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+        if (p.emoji) {
+          ctx.font = `${Math.max(6, p.r)}px serif`;
+          ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          ctx.fillText(p.emoji, p.x, p.y);
+        } else {
+          ctx.fillStyle = p.color;
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+        }
         p.x += p.vx; p.y += p.vy; p.vy += 0.18; p.r *= 0.97; p.life--;
       });
       ctx.globalAlpha = 1;
+    }
+
+    // ── combo popup draw ──
+    function drawComboPopup() {
+      if (s.comboPopTimer <= 0) return;
+      const progress = s.comboPopTimer / 90;
+      const scale = progress > 0.8 ? 1 + (1 - progress) * 1.5 : 1;
+      const alpha = progress < 0.25 ? progress * 4 : 1;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(GW / 2, GH / 2 - 40);
+      ctx.scale(scale, scale);
+      ctx.shadowColor = "#FFD700"; ctx.shadowBlur = 30;
+      ctx.fillStyle = "#FFD700";
+      ctx.font = `bold ${s.comboPopValue >= 10 ? 36 : 42}px 'Noto Sans KR', monospace`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(`${s.comboPopValue}콤보!🔥`, 0, 0);
+      ctx.shadowBlur = 0;
+      ctx.restore();
+      s.comboPopTimer--;
     }
 
     // ── main loop ──
     function loop(t) {
       ctx.clearRect(0, 0, GW, GH);
       drawBg(t);
+
+      // 포획 성공 화면 플래시
+      if (s.flashTimer > 0) {
+        ctx.fillStyle = `rgba(255,255,255,${(s.flashTimer / 8) * 0.4})`;
+        ctx.fillRect(0, 0, GW, GH);
+        s.flashTimer--;
+      }
+
+      // 골든 타임 오버레이
+      if (s.goldenTime) {
+        const pulse = 0.04 + 0.03 * Math.sin(Date.now() * 0.006);
+        ctx.fillStyle = `rgba(255,215,0,${pulse})`;
+        ctx.fillRect(0, 0, GW, GH);
+        const gtSecs = Math.ceil(s.goldenTimeTimer / 60);
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.fillRect(0, 0, GW, 22);
+        ctx.fillStyle = "#FFD700";
+        ctx.font = "bold 10px 'Noto Sans KR', monospace";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.shadowColor = "#FFD700"; ctx.shadowBlur = 14;
+        ctx.fillText(`🌈 골든 타임 XP×2  ${gtSecs}s`, GW / 2, 11);
+        ctx.shadowBlur = 0;
+      }
 
       if (s.levelUpTimer > 0) s.levelUpTimer--;
 
@@ -865,22 +1030,38 @@ export default function WildCatch() {
         drawPlayer(s.player.x, 0);
 
         if (s.catchTimer >= 1500) {
-          const rate = s.monster.special ? 0.30 : catchRate(s.ballLvl, s.monster.level);
+          const sleepBonus = (s.monster.pattern === "sleepy" && s.monster.sleeping) ? 2.0 : 1.0;
+          const rate = s.monster.special ? 0.30 : Math.min(0.98, catchRate(s.ballLvl, s.monster.level) * sleepBonus);
           const ok = s.ball.golden || Math.random() < rate;
           s.ball.active = false;
 
+          // 보스 첫 타 처리 (HP 2 → 1)
+          if (ok && s.monster.boss && s.monster.hp > 1) {
+            s.monster.hp--;
+            s.phase = "playing";
+            spawnParticles(s.monster.x, s.monster.y, true);
+            showMsg("💥 보스에게 1타! 한 번 더!", true);
+            s.raf = requestAnimationFrame(loop); return;
+          }
+
           if (ok) {
             spawnParticles(s.monster.x, s.monster.y, true);
+            spawnMonsterParticles(s.monster);
+            s.flashTimer = 8; // 화면 플래시
             const wasSpecial = s.monster.special;
             s.collection.push({ ...s.monster });
             s.totalCaught++;
-            s.xp += s.monster.level;
+            s.xp += s.monster.level * (s.goldenTime ? 2 : 1);
 
             // combo & miss reset
             s.combo++;
             s.missStreak = 0;
             s.dangerTimer = 0; // 위기 해제
             if (s.combo > s.maxCombo) s.maxCombo = s.combo;
+            if (s.combo >= 3) {
+              s.comboPopTimer = 90;
+              s.comboPopValue = s.combo;
+            }
             if (s.combo % 5 === 0) {
               s.goldenBall = true;
               showMsg(`🏆 ${s.combo}콤보! 황금볼 획득!`, true);
@@ -928,19 +1109,45 @@ export default function WildCatch() {
             s.monster.vy = -4;
             s.escapeAlpha = 1.0;
             s.phase = "escaping";
+            // 도망 웃음 이모지 파티클
+            s.particles.push({
+              x: s.monster.x, y: s.monster.y - MON_R - 10,
+              vx: 0, vy: -1.5,
+              r: 14, color: null, emoji: "😂",
+              life: 60, maxLife: 60,
+            });
             s.raf = requestAnimationFrame(loop); return;
           }
 
           // special monster every 10 catches
           const isSpecialSpawn = s.totalCaught > 0 && s.totalCaught % 10 === 0;
+          // boss every 50 catches (overrides special)
+          const isBossSpawn = s.totalCaught > 0 && s.totalCaught % 50 === 0;
           s.phase = "playing";
-          s.monster = spawnMonster(s.ballLvl, s.charLvl, isSpecialSpawn);
+          s.monster = spawnMonster(s.ballLvl, s.charLvl, isBossSpawn ? false : isSpecialSpawn);
           s.monTimer = 900;
-          if (isSpecialSpawn) showMsg("🌟 특별 몬스터 등장!", true);
+          if (isBossSpawn) {
+            s.monster.boss = true;
+            s.monster.hp = 2;
+            s.monster.level = 10;
+            s.monster.rarity = "legend";
+            s.monster.emoji = "👑";
+            s.monster.name = "대왕 보스";
+            s.monster.vx *= 1.5;
+            s.monster.vy *= 1.5;
+            showMsg("💀 대왕 보스 등장!! 2번 맞춰야 잡힌다!", false);
+          } else if (isSpecialSpawn) {
+            showMsg("🌟 특별 몬스터 등장!", true);
+          }
 
           // Item spawn — 35% chance, only if no item already on field
           if (!s.item && Math.random() < 0.35) {
-            const type = Math.random() < 0.5 ? "speed" : "slow";
+            const itemTypes = ["speed", "slow", "magnet", "shield", "timeplus", "autoCatch"];
+            const itemWeights = [0.22, 0.22, 0.18, 0.18, 0.12, 0.08];
+            let r = Math.random(), cumW = 0, type = "speed";
+            for (let i = 0; i < itemTypes.length; i++) {
+              cumW += itemWeights[i]; if (r < cumW) { type = itemTypes[i]; break; }
+            }
             const side = Math.random() > 0.5 ? 1 : -1;
             s.item = {
               type,
@@ -950,7 +1157,15 @@ export default function WildCatch() {
               vy: (Math.random() > 0.5 ? 0.5 : -0.5) * 0.7,
               timer: 300,
             };
-            showMsg(type === "speed" ? "⚡ 빠르게 아이템 등장!" : "🐌 느리게 아이템 등장!", true);
+            const itemNames = { speed:"⚡빠르게!", slow:"🐌느리게!", magnet:"🧲자석!", shield:"🛡️방패!", timeplus:"⏰시간+!", autoCatch:"🎫뽑기권!" };
+            showMsg(itemNames[type] + " 아이템 등장!", true);
+          }
+
+          // 골든 타임: 20마리마다 트리거 (보스 제외)
+          if (s.totalCaught > 0 && s.totalCaught % 20 === 0 && !s.goldenTime) {
+            s.goldenTime = true;
+            s.goldenTimeTimer = 1800; // 30초
+            showMsg("🌈 골든 타임! 30초 동안 XP 2배!", true);
           }
 
           // Math quiz every 5 catches
@@ -995,6 +1210,15 @@ export default function WildCatch() {
         }
 
       } else {
+        // ── golden time timer ──
+        if (s.goldenTime) {
+          s.goldenTimeTimer--;
+          if (s.goldenTimeTimer <= 0) {
+            s.goldenTime = false;
+            showMsg("🌈 골든 타임 종료!", false);
+          }
+        }
+
         // ── effect timer ──
         if (s.effect) {
           s.effect.timer--;
@@ -1011,16 +1235,27 @@ export default function WildCatch() {
 
         if (s.ball.active) {
           s.ball.y -= 9;
+          // 황금볼 무지개 궤적 업데이트
+          if (s.ball.golden) {
+            if (!s.ball.rainbowTrail) s.ball.rainbowTrail = [];
+            s.ball.rainbowTrail.unshift({ x: s.ball.x, y: s.ball.y });
+            if (s.ball.rainbowTrail.length > 12) s.ball.rainbowTrail.pop();
+          }
           if (s.ball.y < -20) {
             s.ball.active = false;
-            s.combo = 0;
-            s.missStreak++;
-            const limit = missLimit(s.charLvl);
-            if (s.missStreak >= limit) {
-              s.gameOver = true;
-              setGameOver(true);
+            if (s.shield) {
+              s.shield = false;
+              showMsg("🛡️ 방패가 miss를 막았다!", true);
             } else {
-              showMsg(`놓쳤다! (${s.missStreak}/${limit})`, false);
+              s.combo = 0;
+              s.missStreak++;
+              const limit = missLimit(s.charLvl);
+              if (s.missStreak >= limit) {
+                s.gameOver = true;
+                setGameOver(true);
+              } else {
+                showMsg(`놓쳤다! (${s.missStreak}/${limit})`, false);
+              }
             }
           }
           // ball vs monster
@@ -1036,13 +1271,47 @@ export default function WildCatch() {
           if (s.item) {
             const dx = s.ball.x - s.item.x;
             const dy = s.ball.y - s.item.y;
-            if (Math.sqrt(dx * dx + dy * dy) < 18 + BALL_R + 4) {
+            if (Math.sqrt(dx * dx + dy * dy) < 26 + BALL_R + 4) {
               const type = s.item.type;
               s.item = null;
               s.ball.active = false;
-              s.effect = { type, timer: 300 };
               spawnParticles(s.ball.x, s.ball.y, true);
-              showMsg(type === "speed" ? "⚡ 빠르게 5초!" : "🐌 느리게 5초!", true);
+
+              if (type === "speed" || type === "slow" || type === "magnet") {
+                s.effect = { type, timer: 300 };
+                const effectMsg = { speed: "⚡ 빠르게 5초!", slow: "🐌 느리게 5초!", magnet: "🧲 자석! 5초간 몬스터가 다가온다!" };
+                showMsg(effectMsg[type], true);
+              } else if (type === "shield") {
+                s.shield = true;
+                showMsg("🛡️ 방패! 다음 실패 1번 무효!", true);
+              } else if (type === "timeplus") {
+                s.monTimer = Math.min(900, s.monTimer + 600);
+                showMsg("⏰ 시간 +10초!", true);
+              } else if (type === "autoCatch") {
+                if (s.monster) {
+                  spawnParticles(s.monster.x, s.monster.y, true);
+                  s.collection.push({ ...s.monster });
+                  s.totalCaught++;
+                  s.xp += s.monster.level * (s.goldenTime ? 2 : 1);
+                  s.combo++;
+                  s.missStreak = 0;
+                  s.dangerTimer = 0;
+                  if (s.combo > s.maxCombo) s.maxCombo = s.combo;
+                  spawnLevelUpEffect(s.monster.x, s.monster.y);
+                  showMsg(`🎫 뽑기권! ${s.monster.name} 자동 포획!`, true);
+                  const isSpecial2 = s.totalCaught > 0 && s.totalCaught % 10 === 0;
+                  const isBoss2 = s.totalCaught > 0 && s.totalCaught % 50 === 0;
+                  s.monster = spawnMonster(s.ballLvl, s.charLvl, isBoss2 ? false : isSpecial2);
+                  if (isBoss2) {
+                    s.monster.boss = true; s.monster.hp = 2;
+                    s.monster.level = 10; s.monster.rarity = "legend";
+                    s.monster.emoji = "👑"; s.monster.name = "대왕 보스";
+                    s.monster.vx *= 1.5; s.monster.vy *= 1.5;
+                  }
+                  s.monTimer = 900;
+                  syncUi("", true);
+                }
+              }
             }
           }
         }
@@ -1069,16 +1338,59 @@ export default function WildCatch() {
           }
         }
 
-        // ── monster movement (slow if active) ──
+        // ── monster movement (slow/magnet/pattern) ──
         if (s.monster) {
           const slowFactor = (s.effect && s.effect.type === "slow") ? 0.35 : 1;
-          s.monster.x += s.monster.vx * slowFactor;
-          s.monster.y += s.monster.vy * slowFactor;
+          const mon = s.monster;
+
+          // 자석: 몬스터가 플레이어 방향으로 이동
+          if (s.effect && s.effect.type === "magnet") {
+            const dx = s.player.x - mon.x;
+            const dy = (GROUND_Y - PLAYER_H / 2) - mon.y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            mon.vx += (dx / dist) * 0.4;
+            mon.vy += (dy / dist) * 0.25;
+            const spd = Math.sqrt(mon.vx * mon.vx + mon.vy * mon.vy);
+            if (spd > 4) { mon.vx = (mon.vx / spd) * 4; mon.vy = (mon.vy / spd) * 4; }
+          }
+
+          // 도망 AI: Lv5+ 몬스터가 볼 날아오면 반대 방향으로
+          if (mon.level >= 5 && s.ball.active) {
+            const dx = s.ball.x - mon.x;
+            mon.vx = Math.abs(mon.vx) * (dx > 0 ? -1 : 1);
+          }
+
+          if (mon.pattern === "sleepy") {
+            mon.sleepTimer = (mon.sleepTimer || 0) + 1;
+            const sleeping = (mon.sleepTimer % 180) < 60;
+            mon.sleeping = sleeping;
+            if (!sleeping) {
+              mon.x += mon.vx * slowFactor;
+              mon.y += mon.vy * slowFactor;
+            }
+          } else if (mon.pattern === "jump") {
+            mon.jumpPhase = (mon.jumpPhase || 0) + 1;
+            if (mon.jumpPhase % 90 === 0) {
+              mon.vy = -Math.abs(mon.vy || 1) * 2.5;
+            }
+            mon.x += mon.vx * slowFactor;
+            mon.y += mon.vy * slowFactor;
+            mon.vy += 0.08; // gravity
+          } else if (mon.pattern === "zigzag") {
+            mon.zigzagTimer = (mon.zigzagTimer || 0) + 1;
+            if (mon.zigzagTimer % 25 === 0) mon.vx *= -1;
+            mon.x += mon.vx * slowFactor;
+            mon.y += mon.vy * slowFactor;
+          } else {
+            mon.x += mon.vx * slowFactor;
+            mon.y += mon.vy * slowFactor;
+          }
+
           const maxY = GROUND_Y * 0.60;
-          if (s.monster.x < MON_R || s.monster.x > GW - MON_R) s.monster.vx *= -1;
-          if (s.monster.y < 22   || s.monster.y > maxY)        s.monster.vy *= -1;
-          s.monster.x = Math.max(MON_R, Math.min(GW - MON_R, s.monster.x));
-          s.monster.y = Math.max(22,    Math.min(maxY,        s.monster.y));
+          if (mon.x < MON_R || mon.x > GW - MON_R) mon.vx *= -1;
+          if (mon.y < 22   || mon.y > maxY)        mon.vy *= -1;
+          mon.x = Math.max(MON_R, Math.min(GW - MON_R, mon.x));
+          mon.y = Math.max(22,    Math.min(maxY,        mon.y));
         }
 
         // ── monster timer ──
@@ -1101,6 +1413,7 @@ export default function WildCatch() {
         if (s.item) drawItem(s.item);
         if (s.ball.active) drawBall(s.ball.x, s.ball.y);
         drawParticles();
+        drawComboPopup();
         drawSpecialBanner();
         // 5초 이하 카운트다운
         if (s.monTimer > 0 && s.monTimer <= 300 && s.phase === "playing") {
@@ -1133,6 +1446,7 @@ export default function WildCatch() {
           }
         }
         drawEffectHud();
+        drawShieldHud();
         if (s.shake > 0) s.shake--;
         drawPlayer(s.player.x, s.shake);
       }
@@ -1148,7 +1462,7 @@ export default function WildCatch() {
         e.preventDefault();
         const golden = s.goldenBall;
         if (golden) s.goldenBall = false;
-        s.ball = { x: s.player.x, y: GROUND_Y - PLAYER_H + 8, active: true, golden };
+        s.ball = { x: s.player.x, y: GROUND_Y - PLAYER_H + 8, active: true, golden, rainbowTrail: golden ? [] : null };
       }
       if (["ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
     }
@@ -1193,7 +1507,7 @@ export default function WildCatch() {
     if (!s.ball.active && s.phase === "playing") {
       const golden = s.goldenBall;
       if (golden) s.goldenBall = false;
-      s.ball = { x: s.player.x, y: GROUND_Y - PLAYER_H + 8, active: true, golden };
+      s.ball = { x: s.player.x, y: GROUND_Y - PLAYER_H + 8, active: true, golden, rainbowTrail: golden ? [] : null };
     }
   };
 
@@ -1423,6 +1737,8 @@ export default function WildCatch() {
             s.combo = 0; s.maxCombo = 0; s.specialCaught = 0;
             s.specialBanner = 0; s.missStreak = 0; s.gameOver = false;
             s.goldenBall = false; s.monTimer = 900; s.dangerTimer = 0;
+            s.shield = false; s.flashTimer = 0; s.comboPopTimer = 0; s.comboPopValue = 0;
+            s.goldenTime = false; s.goldenTimeTimer = 0;
             setGameOver(false);
             syncUi("새로운 모험 시작!", true);
           }} />
@@ -1564,12 +1880,43 @@ function RulesModal({ onClose }) {
       ],
     },
     {
-      title: "⚡ 아이템",
+      title: "🎁 아이템 (6종)",
       items: [
-        "포획 성공 후 35% 확률로 아이템 등장",
+        "포획 성공 후 35% 확률로 6종 아이템 등장",
         "⚡빠르게: 5초간 플레이어 이동속도 2배",
         "🐌느리게: 5초간 몬스터 속도 35%로 감소",
+        "🧲자석: 5초간 몬스터가 플레이어 쪽으로 이동",
+        "🛡️방패: 다음 볼 miss 1회 무효",
+        "⏰시간+: 몬스터 제한 시간 +10초",
+        "🎫뽑기권: 현재 몬스터 즉시 자동 포획!",
         "5초 안에 볼로 맞추지 않으면 도망!",
+      ],
+    },
+    {
+      title: "👾 몬스터 패턴",
+      items: [
+        "졸음형(Lv1-3): 가끔 멈추고 Zzz — 이때 포획률 2배!",
+        "점프형(Lv3-6): 주기적으로 높게 점프",
+        "지그재그(Lv7+): 방향을 빠르게 바꿈",
+        "도망AI(Lv5+): 볼이 날아오면 반대로 이동",
+        "3콤보 이상 달성 시 화면 중앙에 콤보 팝업!",
+      ],
+    },
+    {
+      title: "💀 보스 몬스터",
+      items: [
+        "50마리 포획마다 대왕 보스 👑 등장!",
+        "보스는 2번 맞춰야 포획됨 (HP ❤️❤️)",
+        "보스는 크기가 2배, 속도도 더 빠름",
+        "황금볼 + 뽑기권 활용 추천!",
+      ],
+    },
+    {
+      title: "🌈 골든 타임",
+      items: [
+        "20마리 포획마다 골든 타임 30초 발동!",
+        "골든 타임 중 XP 2배 획득",
+        "화면에 황금빛 오버레이 + 상단 배너 표시",
       ],
     },
     {
