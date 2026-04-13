@@ -207,14 +207,15 @@ function missLimit(charLvl) {
 
 // (구 charLevelFromCatches 제거 — CHAR_XP_REQ 기반 charLvlFromXp로 대체)
 
-function spawnMonster(ballLvl, charLvl = 1, special = false) {
+function spawnMonster(ballLvl, charLvl = 1, special = false, difficulty = "hard") {
   const min = Math.max(1, ballLvl - 1);
   const max = Math.min(10, ballLvl + 2);
   const lvl = special ? 10 : Math.floor(Math.random() * (max - min + 1)) + min;
   const baseSpeed = 0.9 + lvl * 0.22;
   const tier = Math.floor((charLvl - 1) / 5);
   const speedMult = Math.min(2.0, 1.0 + tier * 0.12);
-  const speed = baseSpeed * speedMult * (special ? 1.3 : 1);
+  const easyMult = difficulty === "easy" ? 0.5 : 1.0;
+  const speed = baseSpeed * speedMult * (special ? 1.3 : 1) * easyMult;
   const candidates = MONSTERS.filter(m => m.level === lvl);
   const template = candidates[Math.floor(Math.random() * candidates.length)];
 
@@ -275,7 +276,8 @@ export default function WildCatch() {
     missStreak: 0,
     gameOver: false,
     goldenBall: false,
-    paused: false,
+    paused: true,   // 난이도 선택 전까지 정지
+    difficulty: null,
     dangerTimer: 0, // 시간 초과 탈출 후 10초 게임오버 카운트다운
     shield: false,        // 방패 아이템: 다음 miss 1회 무효
     flashTimer: 0,        // 포획 성공 화면 플래시
@@ -300,12 +302,13 @@ export default function WildCatch() {
   const [playTime, setPlayTime] = useState(0); // seconds since session start
   const [showResult, setShowResult] = useState(false);
   const [showRules, setShowRules] = useState(false);
+  const [difficulty, setDifficulty] = useState(null); // null | "easy" | "hard"
 
   useEffect(() => {
-    if (gameOver || showRules || showResult) return;
+    if (gameOver || showRules || showResult || !difficulty) return;
     const id = setInterval(() => setPlayTime(t => t + 1), 1000);
     return () => clearInterval(id);
-  }, [gameOver, showRules, showResult]);
+  }, [gameOver, showRules, showResult, difficulty]);
 
   function syncUi(msg, ok) {
     const s = gs.current;
@@ -343,7 +346,7 @@ export default function WildCatch() {
     const ctx = canvas.getContext("2d");
     const s = gs.current;
 
-    s.monster = spawnMonster(1, s.charLvl);
+    s.monster = spawnMonster(1, s.charLvl, false, s.difficulty || "hard");
     s.stars = Array.from({ length: 60 }, () => ({
       x: Math.random() * GW,
       y: Math.random() * GROUND_Y * 0.78,
@@ -1448,7 +1451,7 @@ export default function WildCatch() {
           // boss every 20 catches (overrides special)
           const isBossSpawn = s.totalCaught > 0 && s.totalCaught % 20 === 0;
           s.phase = "playing";
-          s.monster = spawnMonster(s.ballLvl, s.charLvl, isBossSpawn ? false : isSpecialSpawn);
+          s.monster = spawnMonster(s.ballLvl, s.charLvl, isBossSpawn ? false : isSpecialSpawn, s.difficulty || "hard");
           s.monTimer = 900;
           if (isBossSpawn) {
             const bd = BOSS_MONSTERS[Math.floor(Math.random() * BOSS_MONSTERS.length)];
@@ -1459,8 +1462,7 @@ export default function WildCatch() {
             s.monster.emoji = "👑";
             s.monster.name = bd.name;
             s.monster.bossType = bd.type;
-            s.monster.vx *= 1.5;
-            s.monster.vy *= 1.5;
+            if (s.difficulty !== "easy") { s.monster.vx *= 1.5; s.monster.vy *= 1.5; }
             showMsg(`👑 ${bd.name} 등장!! 2번 맞춰야 잡힌다!`, false);
           } else if (isSpecialSpawn) {
             showMsg("🌟 특별 몬스터 등장!", true);
@@ -1531,7 +1533,7 @@ export default function WildCatch() {
         const offscreen = s.monster.x < -80 || s.monster.x > GW + 80 || s.monster.y < -80;
         if (offscreen || s.escapeAlpha <= 0) {
           s.phase = "playing";
-          s.monster = spawnMonster(s.ballLvl, s.charLvl);
+          s.monster = spawnMonster(s.ballLvl, s.charLvl, false, s.difficulty || "hard");
           s.monTimer = 900;
         }
 
@@ -1651,14 +1653,14 @@ export default function WildCatch() {
                   showMsg(`🎫 뽑기권! ${s.monster.name} 자동 포획!`, true);
                   const isSpecial2 = s.totalCaught > 0 && s.totalCaught % 10 === 0;
                   const isBoss2 = s.totalCaught > 0 && s.totalCaught % 20 === 0;
-                  s.monster = spawnMonster(s.ballLvl, s.charLvl, isBoss2 ? false : isSpecial2);
+                  s.monster = spawnMonster(s.ballLvl, s.charLvl, isBoss2 ? false : isSpecial2, s.difficulty || "hard");
                   if (isBoss2) {
                     const bd2 = BOSS_MONSTERS[Math.floor(Math.random() * BOSS_MONSTERS.length)];
                     s.monster.boss = true; s.monster.hp = 3;
                     s.monster.level = 10; s.monster.rarity = "legend";
                     s.monster.emoji = "👑"; s.monster.name = bd2.name;
                     s.monster.bossType = bd2.type;
-                    s.monster.vx *= 1.5; s.monster.vy *= 1.5;
+                    if (s.difficulty !== "easy") { s.monster.vx *= 1.5; s.monster.vy *= 1.5; }
                   }
                   s.monTimer = 900;
                   syncUi("", true);
@@ -1706,12 +1708,13 @@ export default function WildCatch() {
             if (spd > 4) { mon.vx = (mon.vx / spd) * 4; mon.vy = (mon.vy / spd) * 4; }
           }
 
-          // 도망 AI: Lv8+ 몬스터가 볼이 120px 이내 근접 시에만 반응
+          // 도망 AI: Lv8+ 몬스터가 볼이 근접 시 반응 (easy: 50px, hard: 100px)
           if (mon.level >= 8 && s.ball.active) {
             const dx = s.ball.x - mon.x;
             const dy = s.ball.y - mon.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 100) {
+            const fleeRange = s.difficulty === "easy" ? 50 : 100;
+            if (dist < fleeRange) {
               mon.vx = Math.abs(mon.vx) * (dx > 0 ? -1 : 1);
             }
           }
@@ -2082,10 +2085,10 @@ export default function WildCatch() {
         {gameOver && (
           <GameOverModal ui={ui} playTime={playTime} onRestart={() => {
             const s = gs.current;
-            // reset all game state
+            // reset all game state — show difficulty selection again
             s.player = { x: GW / 2 };
             s.ball = { x: 0, y: 0, active: false };
-            s.monster = spawnMonster(1, 1);
+            s.monster = null;
             s.ballLvl = 1; s.xp = 0; s.charLvl = 1; s.levelUpTimer = 0;
             s.phase = "playing"; s.catchTimer = 0;
             s.totalCaught = 0; s.collection = []; s.particles = [];
@@ -2097,8 +2100,20 @@ export default function WildCatch() {
             s.shield = false; s.flashTimer = 0; s.comboPopTimer = 0; s.comboPopValue = 0;
             s.goldenTime = false; s.goldenTimeTimer = 0;
             s.charXp = 0; s.bossCatchBanner = 0;
+            s.difficulty = null; s.paused = true;
             setGameOver(false);
-            syncUi("새로운 모험 시작!", true);
+            setDifficulty(null);
+            setPlayTime(0);
+          }} />
+        )}
+        {!difficulty && !gameOver && (
+          <DifficultyModal onSelect={(diff) => {
+            const s = gs.current;
+            s.difficulty = diff;
+            s.paused = false;
+            s.monster = spawnMonster(1, s.charLvl, false, diff);
+            setDifficulty(diff);
+            syncUi("게임 시작!", true);
           }} />
         )}
       </div>
@@ -2177,6 +2192,51 @@ function StatBox({ label, value, sub, color }) {
       <div className="stat-box-label" style={{ color: "#3A4A64", fontSize: 7, marginBottom: 3 }}>{label}</div>
       <div className="stat-box-value" style={{ color, fontSize: 12, textShadow: `0 0 8px ${color}88` }}>{value}</div>
       {sub && <div className="stat-box-sub" style={{ color: "#445", fontSize: 7, marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function DifficultyModal({ onSelect }) {
+  return (
+    <div style={{
+      position: "absolute", inset: 0,
+      background: "rgba(4,9,22,0.97)",
+      display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      borderRadius: 8, zIndex: 30,
+    }}>
+      <div style={{ fontSize: 36, marginBottom: 6 }}>🌟 준이 캐치 🌟</div>
+      <div style={{ color: "#aaa", fontSize: 13, marginBottom: 28 }}>난이도를 선택하세요</div>
+
+      {/* EASY */}
+      <button onClick={() => onSelect("easy")} style={{
+        width: 220, padding: "18px 0", marginBottom: 16,
+        background: "linear-gradient(135deg,#1b5e20,#43a047)",
+        border: "2px solid #66bb6a", borderRadius: 12,
+        color: "#fff", cursor: "pointer",
+        boxShadow: "0 0 20px #43a04766",
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+      }}>
+        <span style={{ fontSize: 28 }}>🌱</span>
+        <span style={{ fontSize: 20, fontWeight: "bold", letterSpacing: 2 }}>EASY</span>
+        <span style={{ fontSize: 11, color: "#c8e6c9", marginTop: 4 }}>몬스터가 느리고 순해요</span>
+        <span style={{ fontSize: 10, color: "#a5d6a7" }}>속도 50% · 회피 50% 감소</span>
+      </button>
+
+      {/* HARD */}
+      <button onClick={() => onSelect("hard")} style={{
+        width: 220, padding: "18px 0",
+        background: "linear-gradient(135deg,#b71c1c,#e53935)",
+        border: "2px solid #ef5350", borderRadius: 12,
+        color: "#fff", cursor: "pointer",
+        boxShadow: "0 0 20px #e5393566",
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+      }}>
+        <span style={{ fontSize: 28 }}>💀</span>
+        <span style={{ fontSize: 20, fontWeight: "bold", letterSpacing: 2 }}>HARD</span>
+        <span style={{ fontSize: 11, color: "#ffcdd2", marginTop: 4 }}>기본 난이도로 도전!</span>
+        <span style={{ fontSize: 10, color: "#ef9a9a" }}>몬스터가 빠르고 영리해요</span>
+      </button>
     </div>
   );
 }
