@@ -1839,7 +1839,7 @@ export default function WildCatch() {
       window.removeEventListener("keyup", onKeyUp);
       clearTimeout(msgTimeout.current);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // touch controls
   const holdRef = useRef(null);
