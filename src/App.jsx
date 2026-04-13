@@ -168,7 +168,8 @@ function ballSpeedMult(charLvl) {
 }
 // 볼 레벨 이펙트 단계마다 발사 속도 +5% (Lv1:1.0x ... Lv8+:1.35x)
 function ballLvlSpeedMult(ballLvl) {
-  return 1.0 + (Math.min(ballLvl, 8) - 1) * 0.05;
+  // lv1: 1.0(100%) → lv8: 2.0(200%), 선형 증가
+  return 1.0 + (Math.min(ballLvl, 8) - 1) * (1.0 / 7);
 }
 
 // 캐릭터 XP → 레벨 변환
@@ -291,6 +292,11 @@ export default function WildCatch() {
     goldenTimeTimer: 0,   // 남은 프레임 (1800 = 30초)
     bossCatchBanner: 0,   // 보스 포획 배너 타이머
     totalScore: 0,        // 누적 획득 XP (점수)
+    rewind: false,        // 되감기: 다음 miss 1회 볼 되돌림
+    sniperTimer: 0,       // 조준경 남은 프레임 (300 = 5s)
+    feverTimer: 0,        // 콤보 불꽃 남은 프레임 (600 = 10s)
+    freezeTimer: 0,       // 냉동 남은 프레임 (180 = 3s)
+    doubleNext: false,    // 더블: 다음 1회 포획 XP/점수 ×3
   });
 
   const [ui, setUi] = useState({
@@ -328,7 +334,7 @@ export default function WildCatch() {
       ballName: BALL_NAMES[s.ballLvl - 1],
       combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught,
       goldenBall: s.goldenBall, score: s.totalScore,
-      ballSpeed: Math.round(ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl) * 100),
+      ballSpeed: Math.min(200, Math.round(Math.min(2.0, ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl)) * 100)),
       catchPct: pct,
       charLvl: s.charLvl,
     });
@@ -343,7 +349,7 @@ export default function WildCatch() {
       const req = XP_REQ[s.ballLvl - 1] === Infinity ? 999 : XP_REQ[s.ballLvl - 1];
       const mon = s.monster;
       const pct = mon ? Math.round(catchRate(s.ballLvl, mon.level) * 100) : 0;
-      setUi(prev => ({ ...prev, message: "", xp: s.xp, xpReq: req, totalCaught: s.totalCaught, catchPct: pct, charLvl: s.charLvl, combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught, goldenBall: s.goldenBall, score: s.totalScore, ballSpeed: Math.round(ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl) * 100) }));
+      setUi(prev => ({ ...prev, message: "", xp: s.xp, xpReq: req, totalCaught: s.totalCaught, catchPct: pct, charLvl: s.charLvl, combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught, goldenBall: s.goldenBall, score: s.totalScore, ballSpeed: Math.min(200, Math.round(Math.min(2.0, ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl)) * 100)) }));
     }, 2200);
   }
 
@@ -720,6 +726,11 @@ export default function WildCatch() {
         shield:    { icon: "🛡️", label: "방패!",   color: "#69F0AE", bg: "rgba(105,240,174,0.22)" },
         timeplus:  { icon: "⏰", label: "시간+10!", color: "#FF9800", bg: "rgba(255,152,0,0.22)" },
         autoCatch: { icon: "🎫", label: "뽑기권!", color: "#E040FB", bg: "rgba(224,64,251,0.22)" },
+        rewind:    { icon: "⏪", label: "되감기!", color: "#7C4DFF", bg: "rgba(124,77,255,0.22)" },
+        sniper:    { icon: "🎯", label: "조준경!", color: "#00E676", bg: "rgba(0,230,118,0.22)" },
+        fever:     { icon: "🔥", label: "콤보불꽃!", color: "#FF6D00", bg: "rgba(255,109,0,0.22)" },
+        freeze:    { icon: "🧊", label: "냉동!", color: "#00B0FF", bg: "rgba(0,176,255,0.22)" },
+        double:    { icon: "💫", label: "더블!", color: "#F50057", bg: "rgba(245,0,87,0.22)" },
       };
       const cfg = ITEM_CFG[type] || ITEM_CFG.speed;
 
@@ -767,45 +778,47 @@ export default function WildCatch() {
 
     // ── draw active effect HUD ──
     function drawEffectHud() {
-      if (!s.effect) return;
       const EFFECT_MAP = {
-        speed:  { color: "#FFD700", icon: "⚡", label: "빠르게" },
-        slow:   { color: "#00BCD4", icon: "🐌", label: "느리게" },
-        magnet: { color: "#FF4081", icon: "🧲", label: "자석" },
+        speed:  { color: "#FFD700", icon: "⚡", label: "빠르게", timerKey: "effect" },
+        slow:   { color: "#00BCD4", icon: "🐌", label: "느리게", timerKey: "effect" },
+        magnet: { color: "#FF4081", icon: "🧲", label: "자석",   timerKey: "effect" },
       };
-      const m = EFFECT_MAP[s.effect.type];
-      if (!m) return;
-      const secs = Math.ceil(s.effect.timer / 60);
+      const slots = [];
+      if (s.effect && EFFECT_MAP[s.effect.type]) {
+        const m = EFFECT_MAP[s.effect.type];
+        slots.push({ color: m.color, icon: m.icon, label: m.label, secs: Math.ceil(s.effect.timer / 60) });
+      }
+      if (s.sniperTimer > 0)
+        slots.push({ color: "#00E676", icon: "🎯", label: "조준경", secs: Math.ceil(s.sniperTimer / 60) });
+      if (s.feverTimer > 0)
+        slots.push({ color: "#FF6D00", icon: "🔥", label: "콤보불꽃", secs: Math.ceil(s.feverTimer / 60) });
+      if (s.freezeTimer > 0)
+        slots.push({ color: "#00B0FF", icon: "🧊", label: "냉동", secs: Math.ceil(s.freezeTimer / 60) });
+      if (s.shield)
+        slots.push({ color: "#69F0AE", icon: "🛡️", label: "방패대기", secs: null });
+      if (s.rewind)
+        slots.push({ color: "#7C4DFF", icon: "⏪", label: "되감기", secs: null });
+      if (s.doubleNext)
+        slots.push({ color: "#F50057", icon: "💫", label: "더블대기", secs: null });
 
-      ctx.fillStyle = m.color + "26";
-      ctx.strokeStyle = m.color + "99";
-      ctx.lineWidth = 1.5;
-      roundRect(ctx, GW - 84, 6, 76, 22, 6);
-      ctx.fill(); ctx.stroke(); ctx.lineWidth = 1;
-
-      ctx.font = "10px serif";
-      ctx.textAlign = "left"; ctx.textBaseline = "middle";
-      ctx.fillText(m.icon, GW - 78, 17);
-      ctx.fillStyle = m.color;
-      ctx.font = "bold 8px monospace";
-      ctx.fillText(`${m.label} ${secs}s`, GW - 65, 17);
+      slots.forEach((m, i) => {
+        const y0 = 6 + i * 26;
+        ctx.fillStyle = m.color + "26";
+        ctx.strokeStyle = m.color + "99";
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, GW - 84, y0, 76, 22, 6);
+        ctx.fill(); ctx.stroke(); ctx.lineWidth = 1;
+        ctx.font = "10px serif";
+        ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        ctx.fillText(m.icon, GW - 78, y0 + 11);
+        ctx.fillStyle = m.color;
+        ctx.font = "bold 8px monospace";
+        ctx.fillText(m.secs != null ? `${m.label} ${m.secs}s` : m.label, GW - 65, y0 + 11);
+      });
     }
 
-    // ── draw shield HUD ──
-    function drawShieldHud() {
-      if (!s.shield) return;
-      ctx.fillStyle = "rgba(105,240,174,0.15)";
-      ctx.strokeStyle = "#69F0AE99";
-      ctx.lineWidth = 1.5;
-      roundRect(ctx, GW - 84, 32, 76, 22, 6);
-      ctx.fill(); ctx.stroke(); ctx.lineWidth = 1;
-      ctx.font = "10px serif";
-      ctx.textAlign = "left"; ctx.textBaseline = "middle";
-      ctx.fillText("🛡️", GW - 78, 43);
-      ctx.fillStyle = "#69F0AE";
-      ctx.font = "bold 8px monospace";
-      ctx.fillText("방패 대기", GW - 63, 43);
-    }
+    // ── draw shield HUD (legacy, now handled in drawEffectHud) ──
+    function drawShieldHud() {}
 
     function roundRect(c, x, y, w, h, r) {
       c.beginPath();
@@ -1411,7 +1424,7 @@ export default function WildCatch() {
             s.xp += s.monster.level * (s.goldenTime ? 2 : 1);
 
             // combo & miss reset
-            s.combo++;
+            s.combo += s.feverTimer > 0 ? 2 : 1; // 콤보 불꽃: 2콤보씩 적립
             s.missStreak = 0;
             s.dangerTimer = 0; // 위기 해제
             if (s.combo > s.maxCombo) s.maxCombo = s.combo;
@@ -1424,7 +1437,8 @@ export default function WildCatch() {
               showMsg(`🏆 ${s.combo}콤보! 황금볼 획득!`, true);
             }
 
-            const scoreMult = s.difficulty === "easy" ? 1.5 : 1;
+            const scoreMult = (s.difficulty === "easy" ? 1.5 : 1) * (s.doubleNext ? 3 : 1);
+            if (s.doubleNext) { s.doubleNext = false; showMsg("💫 더블! ×3!", true); }
 
             if (wasBoss) {
               // 보스 포획: lv10 몬스터 3배 = 30 XP (일반 +level 10은 아래서 추가)
@@ -1516,8 +1530,9 @@ export default function WildCatch() {
 
           // Item spawn — 35% chance, only if no item already on field
           if (!s.item && Math.random() < 0.35) {
-            const itemTypes = ["speed", "slow", "magnet", "shield", "timeplus", "autoCatch"];
-            const itemWeights = [0.22, 0.22, 0.18, 0.18, 0.12, 0.08];
+            const itemTypes = ["speed","slow","magnet","shield","timeplus","autoCatch","rewind","sniper","fever","freeze","double"];
+            const w = 1/11;
+            const itemWeights = [w,w,w,w,w,w,w,w,w,w,w];
             let r = Math.random(), cumW = 0, type = "speed";
             for (let i = 0; i < itemTypes.length; i++) {
               cumW += itemWeights[i]; if (r < cumW) { type = itemTypes[i]; break; }
@@ -1531,7 +1546,7 @@ export default function WildCatch() {
               vy: (Math.random() > 0.5 ? 0.5 : -0.5) * 0.7,
               timer: 300,
             };
-            const itemNames = { speed:"⚡빠르게!", slow:"🐌느리게!", magnet:"🧲자석!", shield:"🛡️방패!", timeplus:"⏰시간+!", autoCatch:"🎫뽑기권!" };
+            const itemNames = { speed:"⚡빠르게!", slow:"🐌느리게!", magnet:"🧲자석!", shield:"🛡️방패!", timeplus:"⏰시간+!", autoCatch:"🎫뽑기권!", rewind:"⏪되감기!", sniper:"🎯조준경!", fever:"🔥콤보불꽃!", freeze:"🧊냉동!", double:"💫더블!" };
             showMsg(itemNames[type] + " 아이템 등장!", true);
           }
 
@@ -1597,10 +1612,14 @@ export default function WildCatch() {
         if (s.effect) {
           s.effect.timer--;
           if (s.effect.timer <= 0) {
-            showMsg(s.effect.type === "speed" ? "⚡ 볼 가속 종료!" : "🐌 느리게 종료!", false);
+            const endMsg = { speed: "⚡ 볼 가속 종료!", slow: "🐌 느리게 종료!", magnet: "🧲 자석 종료!" };
+            showMsg(endMsg[s.effect.type] || "이펙트 종료!", false);
             s.effect = null;
           }
         }
+        if (s.sniperTimer > 0) { s.sniperTimer--; if (s.sniperTimer === 0) showMsg("🎯 조준경 종료!", false); }
+        if (s.feverTimer > 0)  { s.feverTimer--;  if (s.feverTimer === 0)  showMsg("🔥 콤보 불꽃 종료!", false); }
+        if (s.freezeTimer > 0) { s.freezeTimer--; if (s.freezeTimer === 0) showMsg("🧊 냉동 종료!", false); }
 
         // ── player movement (speed effect → 볼 속도 증가, 이동속도 기본값) ──
         if (s.keys.has("ArrowLeft"))  s.player.x = Math.max(22, s.player.x - 5);
@@ -1608,7 +1627,13 @@ export default function WildCatch() {
 
         if (s.ball.active) {
           const speedBoost = (s.effect && s.effect.type === "speed") ? 1.3 : 1.0;
-          s.ball.y -= 9 * ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl) * speedBoost;
+          const totalSpeedMult = Math.min(2.0, ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl));
+          s.ball.y -= 9 * totalSpeedMult * speedBoost;
+          // 조준경: 볼이 몬스터 x 방향으로 자동 추적
+          if (s.sniperTimer > 0 && s.monster) {
+            const dx = s.monster.x - s.ball.x;
+            s.ball.x += Math.max(-4, Math.min(4, dx * 0.1));
+          }
           // trail 업데이트 (황금볼 또는 Lv2+ 일반 볼)
           if (s.ball.golden) {
             if (!s.ball.rainbowTrail) s.ball.rainbowTrail = [];
@@ -1621,6 +1646,13 @@ export default function WildCatch() {
             if (s.ball.trail.length > maxLen) s.ball.trail.pop();
           }
           if (s.ball.y < -20) {
+            // 되감기: miss 무효 처리
+            if (s.rewind) {
+              s.rewind = false;
+              s.ball.y = GROUND_Y - PLAYER_H - 10;
+              s.ball.x = s.player.x;
+              showMsg("⏪ 되감기! 볼이 돌아왔다!", true);
+            } else {
             s.ball.active = false;
             if (s.shield) {
               s.shield = false;
@@ -1653,6 +1685,7 @@ export default function WildCatch() {
                 }
               }
             }
+            } // end else (no rewind)
           }
           // ball vs monster
           if (s.monster) {
@@ -1684,21 +1717,45 @@ export default function WildCatch() {
                 s.monTimer = Math.min(900, s.monTimer + 600);
                 showMsg("⏰ 시간 +10초!", true);
               } else if (type === "autoCatch") {
-                // 뽑기권: 자석/방패/빠르게/타임+ 중 랜덤 25%씩
-                const lootTypes = ["magnet", "shield", "speed", "timeplus"];
-                const lootType = lootTypes[Math.floor(Math.random() * 4)];
-                if (lootType === "shield") {
-                  s.shield = true;
-                  showMsg("🎫 뽑기! 🛡️ 방패 획득!", true);
-                } else if (lootType === "timeplus") {
-                  s.monTimer = Math.min(s.monTimer + 600, 900);
-                  showMsg("🎫 뽑기! ⏰ 시간 +10초!", true);
-                } else {
+                // 뽑기권: 10가지 아이템 중 랜덤 1개 (동일 확률 10%)
+                const lootAll = ["speed","slow","magnet","shield","timeplus","rewind","sniper","fever","freeze","double"];
+                const lootType = lootAll[Math.floor(Math.random() * lootAll.length)];
+                const lootPfx = "🎫 뽑기! ";
+                if (lootType === "speed" || lootType === "slow" || lootType === "magnet") {
                   s.effect = { type: lootType, timer: 300 };
-                  const lootMsg = { magnet: "🎫 뽑기! 🧲 자석 5초!", speed: "🎫 뽑기! ⚡ 빠르게 5초!" };
-                  showMsg(lootMsg[lootType], true);
+                  const em = { speed: "⚡ 빠르게 5초!", slow: "🐌 느리게 5초!", magnet: "🧲 자석 5초!" };
+                  showMsg(lootPfx + em[lootType], true);
+                } else if (lootType === "shield") {
+                  s.shield = true; showMsg(lootPfx + "🛡️ 방패!", true);
+                } else if (lootType === "timeplus") {
+                  s.monTimer = Math.min(s.monTimer + 600, 900); showMsg(lootPfx + "⏰ 시간 +10초!", true);
+                } else if (lootType === "rewind") {
+                  s.rewind = true; showMsg(lootPfx + "⏪ 되감기!", true);
+                } else if (lootType === "sniper") {
+                  s.sniperTimer = 300; showMsg(lootPfx + "🎯 조준경 5초!", true);
+                } else if (lootType === "fever") {
+                  s.feverTimer = 600; showMsg(lootPfx + "🔥 콤보 불꽃 10초!", true);
+                } else if (lootType === "freeze") {
+                  s.freezeTimer = 180; showMsg(lootPfx + "🧊 냉동 3초!", true);
+                } else if (lootType === "double") {
+                  s.doubleNext = true; showMsg(lootPfx + "💫 더블!", true);
                 }
                 spawnParticles(s.ball.x, s.ball.y, true);
+              } else if (type === "rewind") {
+                s.rewind = true;
+                showMsg("⏪ 되감기! 다음 miss 1회 무효!", true);
+              } else if (type === "sniper") {
+                s.sniperTimer = 300;
+                showMsg("🎯 조준경! 5초간 자동 조준!", true);
+              } else if (type === "fever") {
+                s.feverTimer = 600;
+                showMsg("🔥 콤보 불꽃! 10초간 콤보 ×2!", true);
+              } else if (type === "freeze") {
+                s.freezeTimer = 180;
+                showMsg("🧊 냉동! 3초간 몬스터 정지!", true);
+              } else if (type === "double") {
+                s.doubleNext = true;
+                showMsg("💫 더블! 다음 포획 XP/점수 ×3!", true);
               }
             }
           }
@@ -1728,6 +1785,9 @@ export default function WildCatch() {
 
         // ── monster movement (slow/magnet/pattern) ──
         if (s.monster) {
+          if (s.freezeTimer > 0) {
+            // 냉동: 몬스터 완전 정지 (움직임 생략)
+          } else {
           const slowFactor = (s.effect && s.effect.type === "slow") ? 0.35 : 1;
           const mon = s.monster;
 
@@ -1785,6 +1845,7 @@ export default function WildCatch() {
           if (mon.y < 22   || mon.y > maxY)        mon.vy *= -1;
           mon.x = Math.max(MON_R, Math.min(GW - MON_R, mon.x));
           mon.y = Math.max(22,    Math.min(maxY,        mon.y));
+          } // end else (not frozen)
         }
 
         // ── monster timer ──
@@ -2153,6 +2214,7 @@ export default function WildCatch() {
             s.goldenTime = false; s.goldenTimeTimer = 0;
             s.charXp = 0; s.bossCatchBanner = 0;
             s.difficulty = null; s.paused = true; s.totalScore = 0;
+            s.rewind = false; s.sniperTimer = 0; s.feverTimer = 0; s.freezeTimer = 0; s.doubleNext = false;
             setGameOver(false);
             setDifficulty(null);
             setPlayTime(0);
@@ -2335,7 +2397,8 @@ function RulesModal({ onClose }) {
     {
       title: "🎯 볼 레벨 이펙트 (8종)",
       items: [
-        "볼 레벨업마다 이펙트 강화 + 발사 속도 +5%!",
+        "볼 레벨업마다 이펙트 강화 + 발사 속도 증가!",
+        "Lv1: 100% → Lv8: 200% (선형 증가, 최대 200%)",
         "Lv2: 흰색 페이드 trail · 소프트 글로우",
         "Lv3: 컬러 페이드 trail",
         "Lv4: 선명한 컬러 trail",
@@ -2354,14 +2417,7 @@ function RulesModal({ onClose }) {
         "Lv20-30: 300XP, Lv30-40: 600XP, Lv40-50: 900XP",
         "레벨업 시 모자 모양·복장 색상 변화!",
         "레벨 5단계마다 몬스터 속도 증가 (최대 2배)",
-      ],
-    },
-    {
-      title: "⚡ 볼 발사 속도 성장",
-      items: [
-        "캐릭터 Lv10마다 볼 발사 속도 +10% 자동 증가",
-        "Lv10: +10%, Lv20: +20%, ... Lv50: +50%",
-        "레벨이 높을수록 빠른 볼로 몬스터 포획 유리!",
+        "캐릭터 Lv10마다 볼 발사 속도 +10% 추가 보너스",
       ],
     },
     {
@@ -2374,15 +2430,20 @@ function RulesModal({ onClose }) {
       ],
     },
     {
-      title: "🎁 아이템 (6종)",
+      title: "🎁 아이템 (11종)",
       items: [
-        "포획 성공 후 35% 확률로 6종 아이템 등장",
+        "포획 성공 후 35% 확률로 11종 아이템 등장 (균등 확률)",
         "⚡빠르게: 5초간 볼 발사 속도 30% 증가",
         "🐌느리게: 5초간 몬스터 속도 35%로 감소",
         "🧲자석: 5초간 몬스터가 플레이어 쪽으로 이동",
         "🛡️방패: 다음 볼 miss 1회 무효",
         "⏰시간+: 몬스터 제한 시간 +10초",
-        "🎫뽑기권: 자석·방패·빠르게·시간+ 중 랜덤 1개 발동! (각 25%)",
+        "🎫뽑기권: 나머지 10종 중 랜덤 1개 발동! (각 10%)",
+        "⏪되감기: 볼이 화면 밖으로 나가도 되돌아옴 (miss 무효)",
+        "🎯조준경: 5초간 볼이 몬스터 방향 자동 추적",
+        "🔥콤보불꽃: 10초간 포획마다 콤보 +2씩 적립",
+        "🧊냉동: 3초간 몬스터 완전 정지",
+        "💫더블: 다음 포획 1회 XP·점수 ×3",
         "5초 안에 볼로 맞추지 않으면 도망!",
       ],
     },
