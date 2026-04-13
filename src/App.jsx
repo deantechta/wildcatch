@@ -299,7 +299,7 @@ export default function WildCatch() {
     collection: [], ballName: BALL_NAMES[0],
     catchPct: 88, charLvl: 1,
     combo: 0, maxCombo: 0, specialCaught: 0,
-    missStreak: 0, goldenBall: false, score: 0,
+    missStreak: 0, goldenBall: false, score: 0, ballSpeed: 100,
   });
 
   const [gameOver, setGameOver] = useState(false);
@@ -328,6 +328,7 @@ export default function WildCatch() {
       ballName: BALL_NAMES[s.ballLvl - 1],
       combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught,
       goldenBall: s.goldenBall, score: s.totalScore,
+      ballSpeed: Math.round(ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl) * 100),
       catchPct: pct,
       charLvl: s.charLvl,
     });
@@ -342,7 +343,7 @@ export default function WildCatch() {
       const req = XP_REQ[s.ballLvl - 1] === Infinity ? 999 : XP_REQ[s.ballLvl - 1];
       const mon = s.monster;
       const pct = mon ? Math.round(catchRate(s.ballLvl, mon.level) * 100) : 0;
-      setUi(prev => ({ ...prev, message: "", xp: s.xp, xpReq: req, totalCaught: s.totalCaught, catchPct: pct, charLvl: s.charLvl, combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught, goldenBall: s.goldenBall, score: s.totalScore }));
+      setUi(prev => ({ ...prev, message: "", xp: s.xp, xpReq: req, totalCaught: s.totalCaught, catchPct: pct, charLvl: s.charLvl, combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught, goldenBall: s.goldenBall, score: s.totalScore, ballSpeed: Math.round(ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl) * 100) }));
     }, 2200);
   }
 
@@ -1941,8 +1942,6 @@ export default function WildCatch() {
   const bc = BALL_COLORS[ui.ballLvl - 1];
   const charTheme = getCharTheme(ui.charLvl);
 
-  const pct = ui.catchPct;
-  const pctColor = pct >= 80 ? "#69F0AE" : pct >= 50 ? "#FFD740" : pct >= 25 ? "#FF9800" : "#FF5252";
 
   return (
     <div style={{
@@ -2030,7 +2029,7 @@ export default function WildCatch() {
         <div className="stat-divider" style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
         <StatBox label="포획수" value={ui.totalCaught} color="#FFD740" />
         <div className="stat-divider" style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
-        <StatBox label="확률" value={`${pct}%`} color={pctColor} />
+        <StatBox label="볼속도" value={`${ui.ballSpeed}%`} color="#00E5FF" />
         <div className="stat-divider" style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
         <StatBox label="콤보" value={`${ui.combo}콤보`} sub={`최고 ${ui.maxCombo}`} color="#FF80AB" />
         <div className="stat-divider" style={{ width: 1, background: "#ffffff15", margin: "0 4px" }} />
