@@ -1033,14 +1033,13 @@ export default function WildCatch() {
         const size = 108;
         ctx.drawImage(img, -size / 2, -size / 2, size, size);
 
-      // ── crown ──
-      ctx.fillStyle = '#FFD700';
-      ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 8;
-      for (let ci = 0; ci < 3; ci++) {
-        const cx2 = (-1 + ci) * sc * 3;
-        ctx.fillRect(cx2 - sc/2, -7*sc, sc, sc*2);
-        ctx.beginPath(); ctx.arc(cx2, -8*sc, sc*0.8, 0, Math.PI*2); ctx.fill();
-      }
+      // ── crown emoji ──
+      ctx.font = 'bold 26px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.shadowColor = '#FFD700';
+      ctx.shadowBlur = 14;
+      ctx.fillText('👑', 0, -size / 2 + 4);
       ctx.shadowBlur = 0;
       ctx.restore();
       return;
