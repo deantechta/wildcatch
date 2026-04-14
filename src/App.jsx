@@ -3039,41 +3039,38 @@ function QuizModal({ quiz, onAnswer }) {
 
         {/* 4지선다 — onPointerDown으로 모바일 300ms 딜레이 제거 */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-          {quiz.choices.map((n, i) => {
-            const isCorrectHint = quiz.wrong && n === quiz.answer;
-            const badgeColor = isCorrectHint ? "#69F0AE" : opColor;
-            return (
-              <button
-                key={n}
-                onPointerDown={(e) => { e.preventDefault(); onAnswer(n); }}
-                style={{
-                  padding: "14px 8px 14px",
-                  background: isCorrectHint ? "rgba(105,240,174,0.15)" : "rgba(255,255,255,0.08)",
-                  border: isCorrectHint ? "2px solid #69F0AE" : `2px solid ${opColor}55`,
-                  borderRadius: 14, color: "#E8EAF6", cursor: "pointer",
-                  fontFamily: "monospace", display: "flex", flexDirection: "column",
-                  alignItems: "center", gap: 8,
-                  touchAction: "manipulation",
-                  WebkitTapHighlightColor: "transparent",
-                  userSelect: "none", WebkitUserSelect: "none",
-                }}
-              >
-                {/* 번호 뱃지 — 원형 */}
-                <span style={{
-                  display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  width: 36, height: 36, borderRadius: "50%",
-                  background: `${badgeColor}1A`,
-                  border: `2px solid ${badgeColor}`,
-                  fontSize: 13, fontWeight: "bold", color: badgeColor,
-                  fontFamily: "'Noto Sans KR', monospace",
-                  lineHeight: 1, flexShrink: 0,
-                }}>
-                  {i + 1}번
-                </span>
-                {/* 정답 숫자 */}
-                <span style={{ fontSize: 26, fontWeight: "bold", color: "#E8EAF6", lineHeight: 1 }}>{n}</span>
-              </button>
-            );
+          {quiz.choices.map((n, i) => (
+            <button
+              key={n}
+              onPointerDown={(e) => { e.preventDefault(); onAnswer(n); }}
+              style={{
+                padding: "14px 8px",
+                background: "rgba(255,255,255,0.08)",
+                border: `2px solid ${opColor}55`,
+                borderRadius: 14, color: "#E8EAF6", cursor: "pointer",
+                fontFamily: "monospace", display: "flex", flexDirection: "column",
+                alignItems: "center", gap: 8,
+                touchAction: "manipulation",
+                WebkitTapHighlightColor: "transparent",
+                userSelect: "none", WebkitUserSelect: "none",
+              }}
+            >
+              {/* 번호 뱃지 — 원형 */}
+              <span style={{
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                width: 36, height: 36, borderRadius: "50%",
+                background: `${opColor}1A`,
+                border: `2px solid ${opColor}`,
+                fontSize: 13, fontWeight: "bold", color: opColor,
+                fontFamily: "'Noto Sans KR', monospace",
+                lineHeight: 1, flexShrink: 0,
+              }}>
+                {i + 1}번
+              </span>
+              {/* 정답 숫자 */}
+              <span style={{ fontSize: 26, fontWeight: "bold", color: "#E8EAF6", lineHeight: 1 }}>{n}</span>
+            </button>
+          ));
           })}
         </div>
 
