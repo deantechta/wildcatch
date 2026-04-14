@@ -951,6 +951,7 @@ export default function WildCatch() {
         freeze:    { icon: "🧊", label: "냉동!", color: "#00B0FF", bg: "rgba(0,176,255,0.22)" },
         double:    { icon: "💫", label: "더블!", color: "#F50057", bg: "rgba(245,0,87,0.22)" },
         movefast:  { icon: "🏃", label: "무빙패스트!", color: "#76FF03", bg: "rgba(118,255,3,0.22)" },
+        heal:      { icon: "💊", label: "회복!", color: "#FF80AB", bg: "rgba(255,128,171,0.22)" },
       };
       const cfg = ITEM_CFG[type] || ITEM_CFG.speed;
 
@@ -1720,9 +1721,9 @@ export default function WildCatch() {
 
           // Item spawn — 35% chance, only if no item already on field
           if (!s.item && Math.random() < 0.35) {
-            const itemTypes = ["speed","slow","magnet","shield","timeplus","autoCatch","rewind","sniper","fever","freeze","double","movefast"];
-            const w = 1/12;
-            const itemWeights = [w,w,w,w,w,w,w,w,w,w,w,w];
+            const itemTypes = ["speed","slow","magnet","shield","timeplus","autoCatch","rewind","sniper","fever","freeze","double","movefast","heal"];
+            const w = 1/13;
+            const itemWeights = [w,w,w,w,w,w,w,w,w,w,w,w,w];
             let r = Math.random(), cumW = 0, type = "speed";
             for (let i = 0; i < itemTypes.length; i++) {
               cumW += itemWeights[i]; if (r < cumW) { type = itemTypes[i]; break; }
@@ -1736,7 +1737,7 @@ export default function WildCatch() {
               vy: (Math.random() > 0.5 ? 0.5 : -0.5) * 0.7,
               timer: 300,
             };
-            const itemNames = { speed:"⚡빠르게!", slow:"🐌느리게!", magnet:"🧲자석!", shield:"🛡️방패!", timeplus:"⏰시간+!", autoCatch:"🎫뽑기권!", rewind:"⏪되감기!", sniper:"🎯조준경!", fever:"🔥콤보불꽃!", freeze:"🧊냉동!", double:"💫더블!", movefast:"🏃무빙패스트!" };
+            const itemNames = { speed:"⚡빠르게!", slow:"🐌느리게!", magnet:"🧲자석!", shield:"🛡️방패!", timeplus:"⏰시간+!", autoCatch:"🎫뽑기권!", rewind:"⏪되감기!", sniper:"🎯조준경!", fever:"🔥콤보불꽃!", freeze:"🧊냉동!", double:"💫더블!", movefast:"🏃무빙패스트!", heal:"💊회복!" };
             showMsg(itemNames[type] + " 아이템 등장!", true);
           }
 
@@ -1859,9 +1860,9 @@ export default function WildCatch() {
                 showMsg(`놓쳤다! (${s.missStreak}/${limit})`, false);
                 // 7번 연속 miss → 도움 아이템 자동 등장
                 if (s.missStreak >= 7 && !s.item) {
-                  // 확률: slow(28%)>speed(23%)>shield(19%)>autoCatch(14%)>movefast(10%)>magnet(4%)>timeplus(2%)
-                  const helpWeights = [0.28,0.23,0.19,0.14,0.10,0.04,0.02];
-                  const helpTypes   = ["slow","speed","shield","autoCatch","movefast","magnet","timeplus"];
+                  // 확률: slow(25%)>speed(20%)>heal(18%)>shield(17%)>autoCatch(12%)>movefast(5%)>magnet(2%)>timeplus(1%)
+                  const helpWeights = [0.25,0.20,0.18,0.17,0.12,0.05,0.02,0.01];
+                  const helpTypes   = ["slow","speed","heal","shield","autoCatch","movefast","magnet","timeplus"];
                   let hr = Math.random(), hc = 0, helpType = "shield";
                   for (let i = 0; i < helpWeights.length; i++) { hc += helpWeights[i]; if (hr < hc) { helpType = helpTypes[i]; break; } }
                   s.item = {
@@ -1909,7 +1910,7 @@ export default function WildCatch() {
                 showMsg("⏰ 시간 +10초!", true);
               } else if (type === "autoCatch") {
                 // 뽑기권: 10가지 아이템 중 랜덤 1개 (동일 확률 10%)
-                const lootAll = ["speed","slow","magnet","shield","timeplus","rewind","sniper","fever","freeze","double","movefast"];
+                const lootAll = ["speed","slow","magnet","shield","timeplus","rewind","sniper","fever","freeze","double","movefast","heal"];
                 const lootType = lootAll[Math.floor(Math.random() * lootAll.length)];
                 const lootPfx = "🎫 뽑기! ";
                 if (lootType === "speed" || lootType === "slow" || lootType === "magnet" || lootType === "movefast") {
@@ -1930,6 +1931,11 @@ export default function WildCatch() {
                   s.freezeTimer = 180; showMsg(lootPfx + "🧊 냉동 3초!", true);
                 } else if (lootType === "double") {
                   s.doubleNext = true; showMsg(lootPfx + "💫 더블!", true);
+                } else if (lootType === "heal") {
+                  const before = s.playerHp;
+                  s.playerHp = Math.min(s.playerMaxHp, s.playerHp + 2);
+                  const healed = s.playerHp - before;
+                  showMsg(lootPfx + (healed > 0 ? `💊 HP +${healed}!` : "💊 이미 최대 HP!"), healed > 0);
                 }
                 spawnParticles(s.ball.x, s.ball.y, true);
               } else if (type === "rewind") {
@@ -1947,6 +1953,11 @@ export default function WildCatch() {
               } else if (type === "double") {
                 s.doubleNext = true;
                 showMsg("💫 더블! 다음 포획 XP/점수 ×3!", true);
+              } else if (type === "heal") {
+                const before = s.playerHp;
+                s.playerHp = Math.min(s.playerMaxHp, s.playerHp + 2);
+                const healed = s.playerHp - before;
+                showMsg(healed > 0 ? `💊 회복! HP +${healed}! ${"❤️".repeat(s.playerHp)}` : "💊 이미 최대 HP!", healed > 0);
               }
             }
           }
@@ -2740,21 +2751,22 @@ function RulesModal({ onClose }) {
       ],
     },
     {
-      title: "🎁 아이템 (12종)",
+      title: "🎁 아이템 (13종)",
       items: [
-        "포획 성공 후 35% 확률로 12종 아이템 등장 (균등 확률)",
+        "포획 성공 후 35% 확률로 13종 아이템 등장 (균등 확률)",
         "⚡빠르게: 5초간 볼 발사 속도 30% 증가",
         "🐌느리게: 5초간 몬스터 속도 35%로 감소",
         "🧲자석: 5초간 몬스터가 플레이어 쪽으로 이동",
         "🛡️방패: 다음 볼 miss 1회 무효",
         "⏰시간+: 몬스터 제한 시간 +10초",
-        "🎫뽑기권: 나머지 11종 중 랜덤 1개 발동!",
+        "🎫뽑기권: 나머지 12종 중 랜덤 1개 발동!",
         "⏪되감기: 볼이 화면 밖으로 나가도 되돌아옴 (miss 무효)",
         "🎯조준경: 5초간 볼이 몬스터 방향 자동 추적",
         "🔥콤보불꽃: 10초간 포획마다 콤보 +2씩 적립",
         "🧊냉동: 3초간 몬스터 완전 정지",
         "💫더블: 다음 포획 1회 XP·점수 ×3",
         "🏃무빙패스트: 5초간 캐릭터 이동속도 30% 증가",
+        "💊회복: HP 2 즉시 회복 (최대 초과 불가)",
         "5초 안에 볼로 맞추지 않으면 도망!",
       ],
     },
