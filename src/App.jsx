@@ -3070,8 +3070,7 @@ function QuizModal({ quiz, onAnswer }) {
               {/* 정답 숫자 */}
               <span style={{ fontSize: 26, fontWeight: "bold", color: "#E8EAF6", lineHeight: 1 }}>{n}</span>
             </button>
-          ));
-          })}
+          ))}
         </div>
 
         {/* 키보드 직접 입력 (선택사항) */}
