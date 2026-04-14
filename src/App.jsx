@@ -1244,7 +1244,7 @@ export default function WildCatch() {
           const ok = s.ball.golden || Math.random() < rate;
           s.ball.active = false;
 
-          // 보스 타격 처리 (HP 5→4→...→1→0)
+          // 보스 타격 처리 (HP 10→9→...→1→0)
           if (ok && s.monster.boss && s.monster.hp > 1) {
             s.monster.hp--;
             s.phase = "playing";
@@ -1266,7 +1266,7 @@ export default function WildCatch() {
             const wasSpecial = s.monster.special;
             s.collection.push({ ...s.monster });
             s.totalCaught++;
-            s.xp += s.monster.level * (s.goldenTime ? 2 : 1);
+            s.xp += wasBoss ? 50 * (s.goldenTime ? 2 : 1) : s.monster.level * (s.goldenTime ? 2 : 1);
 
             // combo & miss reset
             s.combo += s.feverTimer > 0 ? 2 : 1; // 콤보 불꽃: 2콤보씩 적립
@@ -1351,8 +1351,8 @@ export default function WildCatch() {
             s.raf = requestAnimationFrame(loop); return;
           }
 
-          // boss every 10 catches (overrides special)
-          const isBossSpawn = s.totalCaught >= 10 && s.totalCaught % 10 === 0;
+          // boss every 7 catches (overrides special)
+          const isBossSpawn = s.totalCaught >= 7 && s.totalCaught % 7 === 0;
           // special monster every 5 catches (only if not boss)
           const isSpecialSpawn = !isBossSpawn && s.totalCaught > 0 && s.totalCaught % 5 === 0;
           s.phase = "playing";
@@ -1361,14 +1361,14 @@ export default function WildCatch() {
           if (isBossSpawn) {
             const bd = BOSS_MONSTERS[Math.floor(Math.random() * BOSS_MONSTERS.length)];
             s.monster.boss = true;
-            s.monster.hp = 5;
+            s.monster.hp = 10;
             s.monster.level = 10;
             s.monster.rarity = "legend";
             s.monster.emoji = "👑";
             s.monster.name = bd.name;
             s.monster.bossType = bd.type;
             if (s.difficulty !== "easy") { s.monster.vx *= 1.5; s.monster.vy *= 1.5; }
-            showMsg(`👑 ${bd.name} 등장!! 5번 맞춰야 잡힌다!`, false);
+            showMsg(`👑 ${bd.name} 등장!! 10번 맞춰야 잡힌다!`, false);
           } else if (isSpecialSpawn) {
             showMsg("🌟 특별 몬스터 등장!", true);
           }
@@ -2313,11 +2313,11 @@ function RulesModal({ onClose }) {
     {
       title: "💀 보스 몬스터",
       items: [
-        "10마리 포획마다 보스 등장! (도망치지 않음)",
-        "피카추·파이리·꼬부기 등 10종 도트 캐릭터",
-        "보스는 5번 맞춰야 포획됨 (HP ❤️❤️❤️❤️❤️)",
-        "보스는 일반 몬스터의 3배 크기, 속도도 더 빠름",
-        "포획 시 XP 30 획득 (lv10 몬스터의 3배)",
+        "7마리 포획마다 보스 등장! (도망치지 않음)",
+        "피카추·팬텀·리자몽 등 30종 포켓몬",
+        "보스는 10번 맞춰야 포획 시도됨 (HP ❤️×10)",
+        "10번 타격 후 포획 성공 여부는 확률로 결정",
+        "포획 시 XP 50 획득 (lv10 몬스터의 5배)",
         "포획 성공 시 👑 보스 포켓몬 캐치! 배너 등장",
         "황금볼 활용 추천!",
       ],
