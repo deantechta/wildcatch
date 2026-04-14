@@ -1314,6 +1314,7 @@ export default function WildCatch() {
           // 보스 타격 처리 (HP n→n-1)
           if (ok && s.monster.boss && s.monster.hp > 1) {
             s.monster.hp--;
+            s.monster.stunTimer = 30; // 0.5초 스턴
             s.phase = "playing";
             spawnParticles(s.monster.x, s.monster.y, true);
             showMsg(`💥 보스 HP: ${"❤️".repeat(s.monster.hp)} 남았다!`, true);
@@ -1325,6 +1326,7 @@ export default function WildCatch() {
             const catchChance = 0.30 + Math.random() * 0.20;
             if (Math.random() >= catchChance) {
               s.ball.active = false;
+              s.monster.stunTimer = 30;
               s.phase = "playing";
               spawnParticles(s.monster.x, s.monster.y, false);
               showMsg(`💨 포획 실패! 파워 포켓몬이 버텼다! ❤️ HP 1 남음`, false);
@@ -1442,7 +1444,7 @@ export default function WildCatch() {
           const isSpecialSpawn = !isBossSpawn && s.totalCaught > 0 && s.totalCaught % 5 === 0;
           s.phase = "playing";
           s.monster = spawnMonster(s.ballLvl, s.charLvl, isBossSpawn ? false : isSpecialSpawn, s.difficulty || "hard");
-          s.monTimer = 900;
+          s.monTimer = isBossSpawn ? 1500 : 900; // 보스: 25초, 일반: 15초
           if (isBossSpawn) {
             const powerList = BOSS_MONSTERS.filter(b => b.power);
             const regularList = BOSS_MONSTERS.filter(b => !b.power);
@@ -1603,7 +1605,7 @@ export default function WildCatch() {
             } else {
               s.combo = 0;
               s.missStreak++;
-              const limit = missLimit(s.charLvl);
+              const limit = s.monster?.boss ? 50 : missLimit(s.charLvl);
               if (s.missStreak >= limit) {
                 s.gameOver = true;
                 setGameOver(true);
@@ -1728,8 +1730,10 @@ export default function WildCatch() {
 
         // ── monster movement (slow/magnet/pattern) ──
         if (s.monster) {
-          if (s.freezeTimer > 0) {
-            // 냉동: 몬스터 완전 정지 (움직임 생략)
+          // 보스 스턴 차감 (타격 후 0.5초 정지)
+          if (s.monster.stunTimer > 0) s.monster.stunTimer--;
+          if (s.freezeTimer > 0 || s.monster.stunTimer > 0) {
+            // 냉동 또는 보스 스턴: 몬스터 완전 정지
           } else {
           const slowFactor = (s.effect && s.effect.type === "slow") ? 0.35 : 1;
           const mon = s.monster;
@@ -1873,7 +1877,7 @@ export default function WildCatch() {
           if (s.monTimer <= 0) {
             if (s.monster.boss) {
               // 보스는 도망치지 않음 — 타이머만 리셋
-              s.monTimer = 900;
+              s.monTimer = 1500;
               showMsg("👑 보스는 도망치지 않는다!", false);
             } else {
               // 시간 초과 → 도망 처리 + 위기 카운트다운 시작
