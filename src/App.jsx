@@ -1513,7 +1513,6 @@ export default function WildCatch() {
             s.monTimer = Math.min(s.monTimer + 300, 1500); // 맞을 때마다 +5초 (최대 25초)
             s.phase = "playing";
             spawnParticles(s.monster.x, s.monster.y, true);
-            if (navigator.vibrate) navigator.vibrate([60, 30, 60]); // 보스 피격 진동
             showMsg(`💥 보스 HP: ${"❤️".repeat(s.monster.hp)} 남았다!`, true);
             s.raf = requestAnimationFrame(loop); return;
           }
@@ -1535,7 +1534,6 @@ export default function WildCatch() {
             spawnParticles(s.monster.x, s.monster.y, true);
             spawnMonsterParticles(s.monster);
             s.flashTimer = 8;
-            if (navigator.vibrate) navigator.vibrate(s.monster.boss ? [80, 40, 80, 40, 120] : 40); // 포획 진동
             const wasBoss = s.monster.boss;
             const wasPower = s.monster.power;
             if (wasBoss) {
@@ -2152,6 +2150,7 @@ export default function WildCatch() {
         const golden = s.goldenBall;
         if (golden) s.goldenBall = false;
         s.ball = { x: s.player.x, y: GROUND_Y - PLAYER_H + 8, active: true, golden, rainbowTrail: golden ? [] : null };
+        if (navigator.vibrate) navigator.vibrate(25);
       }
       if (["ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
     }
@@ -2197,6 +2196,7 @@ export default function WildCatch() {
       const golden = s.goldenBall;
       if (golden) s.goldenBall = false;
       s.ball = { x: s.player.x, y: GROUND_Y - PLAYER_H + 8, active: true, golden, rainbowTrail: golden ? [] : null };
+      if (navigator.vibrate) navigator.vibrate(25);
     }
   };
 
