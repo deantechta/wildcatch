@@ -2986,6 +2986,17 @@ function QuizModal({ quiz, onAnswer }) {
     if (!isNaN(num)) { onAnswer(num); setInput(""); }
   };
 
+  useEffect(() => {
+    const handler = (e) => {
+      const idx = parseInt(e.key, 10);
+      if (idx >= 1 && idx <= 4 && quiz.choices[idx - 1] !== undefined) {
+        onAnswer(quiz.choices[idx - 1]);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [quiz, onAnswer]);
+
   return (
     <div style={{
       position: "fixed", inset: 0,
@@ -3028,7 +3039,7 @@ function QuizModal({ quiz, onAnswer }) {
 
         {/* 4지선다 — onPointerDown으로 모바일 300ms 딜레이 제거 */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-          {quiz.choices.map(n => (
+          {quiz.choices.map((n, i) => (
             <button
               key={n}
               onPointerDown={(e) => { e.preventDefault(); onAnswer(n); }}
@@ -3045,7 +3056,7 @@ function QuizModal({ quiz, onAnswer }) {
                 userSelect: "none", WebkitUserSelect: "none",
               }}
             >
-              {n}
+              <span style={{ fontSize: 11, opacity: 0.5, marginRight: 4 }}>{i + 1}</span>{n}
             </button>
           ))}
         </div>
