@@ -382,9 +382,8 @@ export default function WildCatch() {
 
     // ── draw bg (day/night cycle) ──
     function drawBg(t) {
-      const cycleDuration = 120000; // 2-minute full cycle
+      const cycleDuration = 120000;
       const cyclePos = (t % cycleDuration) / cycleDuration;
-      // 0–0.45: day │ 0.45–0.55: dusk │ 0.55–0.95: night │ 0.95–1.0: dawn
       let dayBlend;
       if      (cyclePos < 0.45) dayBlend = 1;
       else if (cyclePos < 0.55) dayBlend = 1 - (cyclePos - 0.45) / 0.10;
@@ -395,74 +394,264 @@ export default function WildCatch() {
       const lerpRGB = (c1, c2, f) =>
         `rgb(${lerp(c1[0],c2[0],f)},${lerp(c1[1],c2[1],f)},${lerp(c1[2],c2[2],f)})`;
 
-      // Sky gradient
-      const skyTop = lerpRGB([4, 9, 22],   [65, 130, 195], dayBlend);
-      const skyBot = lerpRGB([13, 30, 61],  [155, 205, 240], dayBlend);
+      // 캐릭터 레벨 5단계마다 배경 테마 변경 (0~9)
+      const tier = Math.min(9, Math.floor(s.charLvl / 5));
+      // 우주(7)/심해(8): 항상 밤
+      const db = (tier === 7 || tier === 8) ? 0 : dayBlend;
+
+      // ── Sky ──
+      const skyPalette = [
+        [[4,9,22],[13,30,61],[65,130,195],[155,205,240]],       // 0 초원
+        [[5,15,8],[10,28,12],[38,90,50],[90,145,80]],           // 1 숲
+        [[60,30,10],[90,50,20],[190,130,60],[220,180,100]],     // 2 사막
+        [[20,35,70],[40,60,100],[140,185,230],[200,230,255]],   // 3 설원
+        [[10,30,50],[20,60,90],[80,180,220],[130,220,240]],     // 4 해변
+        [[40,5,2],[20,2,0],[120,30,10],[80,20,5]],              // 5 화산
+        [[15,5,30],[25,8,50],[60,20,100],[100,40,150]],         // 6 마법숲
+        [[1,1,8],[2,3,15],[2,3,12],[8,10,25]],                  // 7 우주
+        [[5,20,50],[10,40,80],[10,40,80],[20,70,120]],          // 8 심해
+        [[200,180,80],[220,200,100],[240,220,150],[255,240,180]], // 9 천상
+      ];
+      const [tn, bn, td, bd2] = skyPalette[tier];
+      const skyTop = lerpRGB(tn, td, db);
+      const skyBot = lerpRGB(bn, bd2, db);
       const g = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
       g.addColorStop(0, skyTop);
       g.addColorStop(1, skyBot);
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, GW, GROUND_Y);
 
-      // Stars (night only)
-      const starAlpha = 1 - dayBlend;
+      // ── Stars ──
+      const starAlpha = tier === 7 ? 1 : (1 - db);
       if (starAlpha > 0.05) {
         s.stars.forEach(st => {
           const a = starAlpha * (0.35 + 0.6 * Math.sin(t * 0.0015 + st.phase));
-          ctx.fillStyle = `rgba(255,255,255,${a.toFixed(2)})`;
+          if (tier === 7) {
+            // 우주: 컬러풀한 별
+            const r2 = Math.floor(180 + st.phase * 75);
+            const g2 = Math.floor(160 + st.phase * 60);
+            ctx.fillStyle = `rgba(${r2},${g2},255,${a.toFixed(2)})`;
+          } else {
+            ctx.fillStyle = `rgba(255,255,255,${a.toFixed(2)})`;
+          }
           ctx.beginPath();
-          ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+          ctx.arc(st.x, st.y, tier === 7 ? st.r + 0.5 : st.r, 0, Math.PI * 2);
           ctx.fill();
         });
+        // 우주: 성운 글로우
+        if (tier === 7) {
+          ctx.globalAlpha = 0.06 + 0.04 * Math.sin(t * 0.0005);
+          const ng = ctx.createRadialGradient(GW*0.6, GROUND_Y*0.35, 10, GW*0.6, GROUND_Y*0.35, 130);
+          ng.addColorStop(0, "rgba(180,80,255,1)");
+          ng.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = ng;
+          ctx.fillRect(0, 0, GW, GROUND_Y);
+          ctx.globalAlpha = 1;
+        }
       }
 
-      // Moon (night)
-      if (dayBlend < 0.7) {
-        const moonA = Math.min(1, (1 - dayBlend) * 1.5);
+      // ── Moon ──
+      if (db < 0.7 && tier !== 5 && tier !== 7 && tier !== 8 && tier !== 9) {
+        const moonA = Math.min(1, (1 - db) * 1.5);
         ctx.globalAlpha = moonA;
         ctx.shadowColor = "#FFF9C4"; ctx.shadowBlur = 28;
         ctx.fillStyle = "#FFFFF0";
         ctx.beginPath(); ctx.arc(GW - 58, 42, 24, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
-        ctx.fillStyle = lerpRGB([4, 9, 22], [65, 130, 195], dayBlend);
+        ctx.fillStyle = lerpRGB(tn, td, db);
         ctx.beginPath(); ctx.arc(GW - 48, 37, 19, 0, Math.PI * 2); ctx.fill();
         ctx.globalAlpha = 1;
       }
 
-      // Sun (day)
-      if (dayBlend > 0.15) {
-        const sunA = Math.min(1, (dayBlend - 0.15) / 0.35);
+      // ── Sun ──
+      if (db > 0.15 && tier !== 5 && tier !== 7 && tier !== 8) {
+        const sunA = Math.min(1, (db - 0.15) / 0.35);
         ctx.globalAlpha = sunA;
-        ctx.shadowColor = "#FFD700"; ctx.shadowBlur = 40;
-        ctx.fillStyle = "#FFE566";
-        ctx.beginPath(); ctx.arc(80, 55, 26, 0, Math.PI * 2); ctx.fill();
+        const sunCol = tier === 9 ? "#FFD700" : "#FFE566";
+        const sunR   = tier === 9 ? 34 : 26;
+        ctx.shadowColor = sunCol; ctx.shadowBlur = tier === 9 ? 60 : 40;
+        ctx.fillStyle = sunCol;
+        ctx.beginPath(); ctx.arc(80, 55, sunR, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0;
-        ctx.strokeStyle = "#FFD700aa"; ctx.lineWidth = 3;
+        ctx.strokeStyle = sunCol + "aa"; ctx.lineWidth = 3;
         for (let i = 0; i < 8; i++) {
           const ang = (i * Math.PI) / 4 + t * 0.0003;
           ctx.beginPath();
-          ctx.moveTo(80 + Math.cos(ang) * 32, 55 + Math.sin(ang) * 32);
-          ctx.lineTo(80 + Math.cos(ang) * 44, 55 + Math.sin(ang) * 44);
+          ctx.moveTo(80 + Math.cos(ang) * (sunR + 6), 55 + Math.sin(ang) * (sunR + 6));
+          ctx.lineTo(80 + Math.cos(ang) * (sunR + 18), 55 + Math.sin(ang) * (sunR + 18));
+          ctx.stroke();
+        }
+        ctx.lineWidth = 1; ctx.globalAlpha = 1;
+      }
+
+      // ── 화산 불씨 ──
+      if (tier === 5) {
+        s.stars.slice(0, 18).forEach(st => {
+          const fy = ((GROUND_Y - st.y - (t * 0.025 + st.phase * 80)) % GROUND_Y + GROUND_Y) % GROUND_Y;
+          const flicker = 0.4 + 0.6 * Math.sin(t * 0.004 + st.phase);
+          ctx.globalAlpha = flicker * 0.55;
+          ctx.fillStyle = `rgb(255,${Math.floor(60 + flicker * 100)},0)`;
+          ctx.beginPath(); ctx.arc(st.x, fy, 2 + st.r, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = 1;
+        });
+      }
+
+      // ── 심해 버블 ──
+      if (tier === 8) {
+        s.stars.slice(0, 25).forEach(st => {
+          const bY = ((GROUND_Y - (t * 0.018 + st.phase * 180)) % GROUND_Y + GROUND_Y) % GROUND_Y;
+          ctx.globalAlpha = 0.18 + 0.25 * Math.sin(t * 0.002 + st.phase);
+          ctx.strokeStyle = "rgba(100,220,255,0.7)";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.arc(st.x, bY, 3 + st.r * 2, 0, Math.PI * 2); ctx.stroke();
+          ctx.globalAlpha = 1; ctx.lineWidth = 1;
+        });
+      }
+
+      // ── 천상 빛기둥 ──
+      if (tier === 9) {
+        for (let i = 0; i < 6; i++) {
+          const bx = (GW / 6) * i + GW / 12;
+          const pulse = 0.04 + 0.07 * Math.sin(t * 0.001 + i * 1.1);
+          ctx.globalAlpha = pulse;
+          const lg = ctx.createLinearGradient(bx, 0, bx, GROUND_Y);
+          lg.addColorStop(0, "rgba(255,240,150,0)");
+          lg.addColorStop(0.5, "rgba(255,240,150,1)");
+          lg.addColorStop(1, "rgba(255,240,150,0)");
+          ctx.fillStyle = lg;
+          ctx.fillRect(bx - 12, 0, 24, GROUND_Y);
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      // ── Ground ──
+      const gPalette = [
+        [() => db>0.5?"#1E5C14":"#132A0C", () => db>0.5?"#2E8020":"#1E4A12", () => db>0.5?"#3A9E28":"#295E18"],
+        [() => "#0E3A0A", () => "#185210", () => "#1E6A14"],
+        [() => "#B89050", () => "#D4A860", () => "#C09858"],
+        [() => "#C8DCF0", () => "#DFF0FF", () => "#FFFFFF"],
+        [() => "#C8A870", () => "#D8B880", () => "#DCAC68"],
+        [() => "#1A0A02", () => "#2D0E04", () => "#FF4400"],
+        [() => "#1A0A30", () => "#2D1050", () => "#9B00FF"],
+        [() => "#0A0A14", () => "#14141E", () => "#2A2A40"],
+        [() => "#083050", () => "#0A4070", () => "#1060A0"],
+        [() => "#D4B840", () => "#F0D060", () => "#FFD700"],
+      ];
+      const [gBaseFn, gTopFn, gDetFn] = gPalette[tier];
+      ctx.fillStyle = gBaseFn();
+      ctx.fillRect(0, GROUND_Y, GW, GH - GROUND_Y);
+      ctx.fillStyle = gTopFn();
+      ctx.fillRect(0, GROUND_Y, GW, 10);
+      ctx.fillStyle = gDetFn();
+
+      if (tier === 3) {
+        // 설원: 눈 덩어리
+        for (let i = 3; i < GW; i += 22) {
+          ctx.beginPath();
+          ctx.arc(i + 5, GROUND_Y + 3, 6 + (i % 5), Math.PI, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (tier === 5) {
+        // 화산: 용암 균열
+        for (let i = 4; i < GW; i += 28) ctx.fillRect(i, GROUND_Y - 3, 2 + (i % 5), 8);
+        const lv = 0.28 + 0.28 * Math.sin(t * 0.002);
+        ctx.globalAlpha = lv;
+        ctx.fillStyle = "#FF5500";
+        for (let i = 10; i < GW; i += 38) ctx.fillRect(i, GROUND_Y, 4, 5);
+        ctx.globalAlpha = 1;
+      } else if (tier === 7) {
+        // 우주: 암석
+        for (let i = 3; i < GW; i += 19) {
+          const h = 4 + (i % 9);
+          ctx.fillRect(i, GROUND_Y - h + 5, 3, h);
+        }
+      } else if (tier === 8) {
+        // 심해: 물결
+        for (let x = 0; x < GW; x += 4) {
+          const wy = Math.sin(x * 0.05 + t * 0.002) * 5;
+          ctx.fillRect(x, GROUND_Y - 3 + wy, 4, 7);
+        }
+      } else {
+        for (let i = 3; i < GW; i += 19) {
+          const h = 4 + (i % 7);
+          ctx.fillRect(i, GROUND_Y - h + 5, 2, h);
+          ctx.fillRect(i + 7, GROUND_Y - h + 2, 2, h + 2);
+          ctx.fillRect(i + 13, GROUND_Y - h + 6, 2, h - 2);
+        }
+      }
+
+      // ── Horizon decorations ──
+      if (tier === 1) {
+        // 숲: 나무 실루엣
+        const treeCol = db > 0.5 ? "#0A2A06" : "#060E04";
+        ctx.fillStyle = treeCol;
+        [30,80,140,200,260,320,380,430].forEach(tx => {
+          const h = 45 + (tx % 25);
+          ctx.beginPath();
+          ctx.moveTo(tx, GROUND_Y);
+          ctx.lineTo(tx-22, GROUND_Y-h*0.5); ctx.lineTo(tx-14, GROUND_Y-h*0.5);
+          ctx.lineTo(tx-18, GROUND_Y-h*0.7); ctx.lineTo(tx-8,  GROUND_Y-h*0.7);
+          ctx.lineTo(tx,    GROUND_Y-h);
+          ctx.lineTo(tx+8,  GROUND_Y-h*0.7); ctx.lineTo(tx+18, GROUND_Y-h*0.7);
+          ctx.lineTo(tx+14, GROUND_Y-h*0.5); ctx.lineTo(tx+22, GROUND_Y-h*0.5);
+          ctx.closePath(); ctx.fill();
+        });
+      }
+      if (tier === 2) {
+        // 사막: 선인장
+        ctx.fillStyle = "#5A8C30";
+        [60,160,280,380].forEach(tx => {
+          const h = 35 + (tx % 20);
+          ctx.fillRect(tx-4, GROUND_Y-h, 8, h);
+          ctx.fillRect(tx-16, GROUND_Y-Math.floor(h*0.6), 12, 6);
+          ctx.fillRect(tx+4,  GROUND_Y-Math.floor(h*0.7), 12, 6);
+          ctx.fillRect(tx-16, GROUND_Y-Math.floor(h*0.6)-12, 6, 12);
+          ctx.fillRect(tx+16, GROUND_Y-Math.floor(h*0.7)-12, 6, 12);
+        });
+      }
+      if (tier === 3) {
+        // 설원: 눈 내림
+        s.stars.slice(0, 35).forEach(st => {
+          const sY = ((st.y + t * 0.03 + st.phase * 100) % GROUND_Y + GROUND_Y) % GROUND_Y;
+          const sx = (st.x + Math.sin(t * 0.001 + st.phase) * 18 + GW) % GW;
+          ctx.globalAlpha = 0.5 + 0.4 * st.r;
+          ctx.fillStyle = "#FFFFFF";
+          ctx.beginPath(); ctx.arc(sx, sY, st.r + 1.5, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = 1;
+        });
+      }
+      if (tier === 4) {
+        // 해변: 바다 띠
+        const wo = Math.sin(t * 0.001) * 5;
+        ctx.globalAlpha = 0.5;
+        const sg = ctx.createLinearGradient(0, GROUND_Y-30+wo, 0, GROUND_Y+5);
+        sg.addColorStop(0, "rgba(0,120,200,0)");
+        sg.addColorStop(1, "rgba(0,100,180,0.7)");
+        ctx.fillStyle = sg; ctx.fillRect(0, GROUND_Y-30+wo, GW, 35);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = "rgba(100,200,255,0.4)"; ctx.lineWidth = 2;
+        for (let w = 0; w < 3; w++) {
+          ctx.beginPath();
+          for (let x = 0; x < GW; x += 4) {
+            const y = GROUND_Y - 18 + w*8 + Math.sin(x*0.05 + t*0.002 + w)*4 + wo;
+            x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          }
           ctx.stroke();
         }
         ctx.lineWidth = 1;
-        ctx.globalAlpha = 1;
       }
-
-      // Ground (brighter during day)
-      const gBase = dayBlend > 0.5 ? "#1E5C14" : "#132A0C";
-      const gTop  = dayBlend > 0.5 ? "#2E8020" : "#1E4A12";
-      const gDet  = dayBlend > 0.5 ? "#3A9E28" : "#295E18";
-      ctx.fillStyle = gBase;
-      ctx.fillRect(0, GROUND_Y, GW, GH - GROUND_Y);
-      ctx.fillStyle = gTop;
-      ctx.fillRect(0, GROUND_Y, GW, 10);
-      ctx.fillStyle = gDet;
-      for (let i = 3; i < GW; i += 19) {
-        const h = 4 + (i % 7);
-        ctx.fillRect(i, GROUND_Y - h + 5, 2, h);
-        ctx.fillRect(i + 7, GROUND_Y - h + 2, 2, h + 2);
-        ctx.fillRect(i + 13, GROUND_Y - h + 6, 2, h - 2);
+      if (tier === 6) {
+        // 마법숲: 빛나는 나무
+        [[50,0.8],[130,1.2],[210,0.9],[300,1.1],[390,0.7]].forEach(([tx, sp]) => {
+          const gw2 = 0.3 + 0.4 * Math.sin(t * 0.002 * sp);
+          ctx.shadowColor = "#CC00FF"; ctx.shadowBlur = 20 * gw2;
+          ctx.fillStyle = `rgba(100,0,180,${(0.55 + gw2 * 0.35).toFixed(2)})`;
+          const h = 50 + (tx % 22);
+          ctx.beginPath();
+          ctx.moveTo(tx, GROUND_Y-h); ctx.lineTo(tx-20, GROUND_Y); ctx.lineTo(tx+20, GROUND_Y);
+          ctx.closePath(); ctx.fill();
+          ctx.shadowBlur = 0;
+        });
       }
     }
 
@@ -1324,6 +1513,7 @@ export default function WildCatch() {
             s.monTimer = Math.min(s.monTimer + 300, 1500); // 맞을 때마다 +5초 (최대 25초)
             s.phase = "playing";
             spawnParticles(s.monster.x, s.monster.y, true);
+            if (navigator.vibrate) navigator.vibrate([60, 30, 60]); // 보스 피격 진동
             showMsg(`💥 보스 HP: ${"❤️".repeat(s.monster.hp)} 남았다!`, true);
             s.raf = requestAnimationFrame(loop); return;
           }
@@ -1344,7 +1534,8 @@ export default function WildCatch() {
           if (ok) {
             spawnParticles(s.monster.x, s.monster.y, true);
             spawnMonsterParticles(s.monster);
-            s.flashTimer = 8; // 화면 플래시
+            s.flashTimer = 8;
+            if (navigator.vibrate) navigator.vibrate(s.monster.boss ? [80, 40, 80, 40, 120] : 40); // 포획 진동
             const wasBoss = s.monster.boss;
             const wasPower = s.monster.power;
             if (wasBoss) {
