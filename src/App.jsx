@@ -302,6 +302,8 @@ export default function WildCatch() {
     bossAttackTimer: 0,    // 보스 공격 볼 발사 타이머
     bossPreAttack: null,  // { targetX, timer, impactR } — 발사 전 경고 단계
     bossProjectiles: [],  // [{ x, y, vx, vy, targetX, impactR }]
+    bossLastHitX: -999,   // 직전 피격 시 보스 X 위치
+    bossInvincible: 0,    // 순간이동 후 무적 프레임 (60 = 1초)
   });
 
   const [ui, setUi] = useState({
@@ -1195,14 +1197,19 @@ export default function WildCatch() {
 
       ctx.shadowBlur = 0;
       if (mon.boss) {
-        // pixel art boss sprite
+        // 순간이동 후 무적 반짝임
+        if (s.bossInvincible > 0) {
+          const blink = Math.floor(s.bossInvincible / 5) % 2 === 0;
+          ctx.globalAlpha = blink ? 0.3 : 1;
+        }
         drawBossSprite(mon, mx, my, t);
+        ctx.globalAlpha = 1;
         // boss HP display
-        ctx.fillStyle = "#FF5252";
+        ctx.fillStyle = s.bossInvincible > 0 ? "#90CAF9" : "#FF5252";
         ctx.font = "bold 12px monospace";
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.shadowColor = "#FF5252"; ctx.shadowBlur = 10;
-        ctx.fillText(`HP ${"❤️".repeat(mon.hp)}`, mx, my - 82);
+        ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
+        ctx.fillText(s.bossInvincible > 0 ? `🛡️ ${"❤️".repeat(mon.hp)}` : `HP ${"❤️".repeat(mon.hp)}`, mx, my - 82);
         ctx.shadowBlur = 0;
       } else {
         ctx.font = "42px serif";
@@ -1502,18 +1509,44 @@ export default function WildCatch() {
           s.ball.active = false;
 
           // 보스 타격 처리 (HP n→n-1)
-          if (ok && s.monster.boss && s.monster.hp > 1) {
+          if (ok && s.monster.boss && s.monster.hp > 1 && s.bossInvincible <= 0) {
             s.monster.hp--;
-            s.monster.stunTimer = 30; // 0.5초 스턴
-            // 스턴 후 랜덤 방향으로 이동 (같은 자리에서 계속 맞추는 것 방지)
-            const bossSpeed = 1.8 + Math.random() * 1.8;
-            const bossAngle = Math.random() * Math.PI * 2;
-            s.monster.vx = Math.cos(bossAngle) * bossSpeed;
-            s.monster.vy = Math.sin(bossAngle) * bossSpeed * 0.5;
-            s.monTimer = Math.min(s.monTimer + 300, 1500); // 맞을 때마다 +5초 (최대 25초)
+            s.monTimer = Math.min(s.monTimer + 300, 1500);
             s.phase = "playing";
             spawnParticles(s.monster.x, s.monster.y, true);
-            showMsg(`💥 보스 HP: ${"❤️".repeat(s.monster.hp)} 남았다!`, true);
+
+            // 직전 피격 위치와 80px 이내 → "같은 자리 연속" 판정 → 순간이동
+            const sameSpot = Math.abs(s.monster.x - s.bossLastHitX) < 80;
+            s.bossLastHitX = s.monster.x;
+
+            if (sameSpot) {
+              // 화면 반대쪽 랜덤 위치로 순간이동 + 1초 무적
+              const half = GW / 2;
+              const newX = s.monster.x < half
+                ? half + 40 + Math.random() * (half - 80)
+                : 40 + Math.random() * (half - 80);
+              const newY = 40 + Math.random() * (GROUND_Y * 0.45);
+              s.monster.x = newX;
+              s.monster.y = newY;
+              s.bossInvincible = 60; // 1초 무적
+              s.monster.stunTimer = 20;
+              showMsg(`💥 보스 HP: ${"❤️".repeat(s.monster.hp)} — 순간이동!`, true);
+            } else {
+              // 일반 피격: 랜덤 방향으로 이동
+              s.monster.stunTimer = 30;
+              const spd = 1.8 + Math.random() * 1.8;
+              const ang = Math.random() * Math.PI * 2;
+              s.monster.vx = Math.cos(ang) * spd;
+              s.monster.vy = Math.sin(ang) * spd * 0.5;
+              showMsg(`💥 보스 HP: ${"❤️".repeat(s.monster.hp)} 남았다!`, true);
+            }
+            s.raf = requestAnimationFrame(loop); return;
+          }
+          // 무적 중 피격 시도 → 튕김 처리
+          if (ok && s.monster.boss && s.monster.hp > 1 && s.bossInvincible > 0) {
+            s.ball.active = false;
+            s.phase = "playing";
+            showMsg("🛡️ 보스 이동 중 — 무적!", false);
             s.raf = requestAnimationFrame(loop); return;
           }
 
@@ -1928,6 +1961,7 @@ export default function WildCatch() {
         if (s.monster) {
           // 보스 스턴 차감 (타격 후 0.5초 정지)
           if (s.monster.stunTimer > 0) s.monster.stunTimer--;
+          if (s.bossInvincible > 0) s.bossInvincible--;
           if (s.freezeTimer > 0 || s.monster.stunTimer > 0) {
             // 냉동 또는 보스 스턴: 몬스터 완전 정지
           } else {
@@ -2442,6 +2476,7 @@ export default function WildCatch() {
             s.rewind = false; s.sniperTimer = 0; s.feverTimer = 0; s.freezeTimer = 0; s.doubleNext = false;
             s.playerHp = 5; s.playerMaxHp = 5; s.playerInvincible = 0;
             s.bossAttackTimer = 0; s.bossPreAttack = null; s.bossProjectiles = [];
+            s.bossLastHitX = -999; s.bossInvincible = 0;
             setGameOver(false);
             setDifficulty(null);
             setPlayTime(0);
