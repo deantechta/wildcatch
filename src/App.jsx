@@ -3056,7 +3056,20 @@ function QuizModal({ quiz, onAnswer }) {
                 userSelect: "none", WebkitUserSelect: "none",
               }}
             >
-              <span style={{ fontSize: 11, opacity: 0.5, marginRight: 4 }}>{i + 1}</span>{n}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                <span style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  width: 24, height: 24, borderRadius: "50%",
+                  background: quiz.wrong && n === quiz.answer ? "#69F0AE22" : `${opColor}22`,
+                  border: `1.5px solid ${quiz.wrong && n === quiz.answer ? "#69F0AE" : opColor}`,
+                  fontSize: 11, fontWeight: "bold", color: quiz.wrong && n === quiz.answer ? "#69F0AE" : opColor,
+                  fontFamily: "'Noto Sans KR', sans-serif",
+                  lineHeight: 1,
+                }}>
+                  {i + 1}번
+                </span>
+                <span style={{ fontSize: 22, fontWeight: "bold", lineHeight: 1 }}>{n}</span>
+              </div>
             </button>
           ))}
         </div>
