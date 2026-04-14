@@ -299,13 +299,9 @@ export default function WildCatch() {
     playerHp: 5,          // 플레이어 HP (최대 5)
     playerMaxHp: 5,
     playerInvincible: 0,  // 피격 후 무적 프레임 (120 = 2초)
-    bossChargeState: "idle", // idle | warning | charging | returning
-    bossChargeTimer: 0,
-    bossChargeWarnTimer: 0,
-    bossOriginX: 0,
-    bossOriginY: 0,
-    bossChargeDx: 0,
-    bossChargeDy: 0,
+    bossAttackTimer: 0,    // 보스 공격 볼 발사 타이머
+    bossPreAttack: null,  // { targetX, timer, impactR } — 발사 전 경고 단계
+    bossProjectiles: [],  // [{ x, y, vx, vy, targetX, impactR }]
   });
 
   const [ui, setUi] = useState({
@@ -863,6 +859,52 @@ export default function WildCatch() {
       c.closePath();
     }
 
+    // ── boss projectiles & pre-attack warning ──
+    function drawBossProjectiles() {
+      // 발사 전 경고: 바닥에 깜박이는 빨간 타원
+      if (s.bossPreAttack) {
+        const { targetX, impactR } = s.bossPreAttack;
+        const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.04);
+        ctx.globalAlpha = 0.35 + 0.45 * pulse;
+        ctx.fillStyle = "#FF1744";
+        ctx.shadowColor = "#FF1744"; ctx.shadowBlur = 18;
+        ctx.beginPath();
+        ctx.ellipse(targetX, GROUND_Y - 4, impactR, impactR * 0.28, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+        // 테두리 링
+        ctx.strokeStyle = `rgba(255,80,80,${0.7 + 0.3 * pulse})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(targetX, GROUND_Y - 4, impactR, impactR * 0.28, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.lineWidth = 1;
+      }
+      // 날아오는 투사체
+      s.bossProjectiles.forEach(p => {
+        // 바닥 경고 그림자 (투사체 비행 중에도 유지)
+        const progress = Math.max(0, (p.y - (s.monster?.y ?? 0)) / (GROUND_Y - (s.monster?.y ?? 0)));
+        ctx.globalAlpha = 0.2 + 0.4 * progress;
+        ctx.fillStyle = "#FF1744";
+        ctx.beginPath();
+        ctx.ellipse(p.targetX, GROUND_Y - 4, p.impactR, p.impactR * 0.28, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        // 투사체 볼
+        ctx.fillStyle = "#FF3D00";
+        ctx.shadowColor = "#FF6D00"; ctx.shadowBlur = 16;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 10, 0, Math.PI * 2); ctx.fill();
+        // 꼬리 흔적
+        ctx.strokeStyle = "rgba(255,120,50,0.55)";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(p.x - p.vx * 4, p.y - p.vy * 4);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        ctx.shadowBlur = 0; ctx.lineWidth = 1;
+      });
+    }
+
     // ── special banner ──
     function drawSpecialBanner() {
       if (s.specialBanner <= 0) return;
@@ -962,23 +1004,6 @@ export default function WildCatch() {
 
       ctx.shadowBlur = 0;
       if (mon.boss) {
-        // 보스 돌진 경고: 빨간 링 깜박임
-        if (s.bossChargeState === "warning") {
-          const pulse = 0.55 + 0.45 * Math.sin(Date.now() * 0.05);
-          ctx.strokeStyle = `rgba(255, 60, 60, ${pulse})`;
-          ctx.lineWidth = 6;
-          ctx.shadowColor = "#FF0000"; ctx.shadowBlur = 22;
-          ctx.beginPath(); ctx.arc(mx, my, 68, 0, Math.PI * 2); ctx.stroke();
-          ctx.shadowBlur = 0; ctx.lineWidth = 1;
-        }
-        // 돌진 중: 빨간 잔상 흔적
-        if (s.bossChargeState === "charging") {
-          ctx.strokeStyle = "rgba(255,100,100,0.7)";
-          ctx.lineWidth = 4;
-          ctx.shadowColor = "#FF4444"; ctx.shadowBlur = 14;
-          ctx.beginPath(); ctx.arc(mx, my, 68, 0, Math.PI * 2); ctx.stroke();
-          ctx.shadowBlur = 0; ctx.lineWidth = 1;
-        }
         // pixel art boss sprite
         drawBossSprite(mon, mx, my, t);
         // boss HP display
@@ -1433,9 +1458,10 @@ export default function WildCatch() {
             s.monster.name = bd.name;
             s.monster.bossType = bd.type;
             if (s.difficulty !== "easy") { s.monster.vx *= 1.5; s.monster.vy *= 1.5; }
-            // 보스 돌진 상태 초기화
-            s.bossChargeState = "idle";
-            s.bossChargeTimer = 0;
+            // 보스 공격 상태 초기화
+            s.bossAttackTimer = 0;
+            s.bossPreAttack = null;
+            s.bossProjectiles = [];
             if (bd.power) {
               showMsg(`⚡ 파워 포켓몬이 나타났다! (경험치 2배!)`, false);
             } else {
@@ -1704,8 +1730,6 @@ export default function WildCatch() {
         if (s.monster) {
           if (s.freezeTimer > 0) {
             // 냉동: 몬스터 완전 정지 (움직임 생략)
-          } else if (s.monster.boss && (s.bossChargeState === "charging" || s.bossChargeState === "returning")) {
-            // 보스 돌진/복귀 중에는 일반 이동 건너뜀 (charge 코드가 직접 위치 제어)
           } else {
           const slowFactor = (s.effect && s.effect.type === "slow") ? 0.35 : 1;
           const mon = s.monster;
@@ -1767,46 +1791,60 @@ export default function WildCatch() {
           } // end else (not frozen)
         }
 
-        // ── boss charge attack ──
+        // ── boss projectile attack ──
         if (s.monster && s.monster.boss && s.phase === "playing" && s.freezeTimer <= 0) {
-          const mon = s.monster;
           const isEasy = s.difficulty === "easy";
-          // Easy: 6초(일반) / 5초(파워) | Hard: 4초(일반) / 3초(파워)
-          const chargeInterval = isEasy
-            ? (mon.power ? 300 : 360)
-            : (mon.power ? 180 : 240);
-          if (s.bossChargeState === "idle") {
-            s.bossChargeTimer++;
-            if (s.bossChargeTimer >= chargeInterval) {
-              s.bossChargeTimer = 0;
-              s.bossChargeState = "warning";
-              s.bossChargeWarnTimer = isEasy ? 90 : 48; // Easy: 1.5초 | Hard: 0.8초
-            }
-          } else if (s.bossChargeState === "warning") {
-            s.bossChargeWarnTimer--;
-            if (s.bossChargeWarnTimer <= 0) {
-              // 플레이어 방향으로 돌진 벡터 고정
-              const dx = s.player.x - mon.x;
-              const dy = (GROUND_Y - PLAYER_H / 2) - mon.y;
+          // Easy: 6초(일반)/5초(파워)  |  Hard: 3.5초(일반)/2.5초(파워)
+          const attackInterval = isEasy
+            ? (s.monster.power ? 300 : 360)
+            : (s.monster.power ? 150 : 210);
+          // 발사 전 경고 단계 (Easy: 1.2초=72f, Hard: 0.6초=36f)
+          const warnFrames = isEasy ? 72 : 36;
+          const impactR = isEasy ? 48 : 60;
+
+          if (s.bossPreAttack) {
+            // 경고 카운트다운 — 이 시간 동안 바닥에 빨간 원 표시
+            s.bossPreAttack.timer--;
+            if (s.bossPreAttack.timer <= 0) {
+              // 경고 종료 → 실제 발사
+              const targetX = s.bossPreAttack.targetX;
+              const dx = targetX - s.monster.x;
+              const dy = GROUND_Y - s.monster.y;
               const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-              s.bossChargeDx = dx / dist;
-              s.bossChargeDy = dy / dist;
-              s.bossOriginX = mon.x;
-              s.bossOriginY = mon.y;
-              s.bossChargeState = "charging";
+              const speed = isEasy ? 5 : 8;
+              s.bossProjectiles.push({
+                x: s.monster.x, y: s.monster.y,
+                vx: (dx / dist) * speed,
+                vy: (dy / dist) * speed,
+                targetX,
+                impactR,
+              });
+              s.bossPreAttack = null;
             }
-          } else if (s.bossChargeState === "charging") {
-            const SPEED = 14;
-            mon.x += s.bossChargeDx * SPEED;
-            mon.y += s.bossChargeDy * SPEED;
-            // 플레이어 충돌 감지 (히트박스 반경 55px)
-            const pdx = mon.x - s.player.x;
-            const pdy = mon.y - (GROUND_Y - PLAYER_H / 2);
-            if (Math.sqrt(pdx * pdx + pdy * pdy) < 55) {
-              if (s.playerInvincible <= 0) {
+          } else {
+            s.bossAttackTimer++;
+            if (s.bossAttackTimer >= attackInterval) {
+              s.bossAttackTimer = 0;
+              // 경고 시작: 현재 플레이어 위치를 타깃으로 고정
+              s.bossPreAttack = { targetX: s.player.x, timer: warnFrames, impactR };
+              showMsg("⚠️ 공격! 빨간 원을 피해!", false);
+            }
+          }
+        } else {
+          // 보스 없어지면 경고/투사체 초기화
+          s.bossPreAttack = null;
+          s.bossProjectiles = [];
+        }
+        // 투사체 이동 + 착탄 판정
+        if (s.bossProjectiles.length > 0) {
+          s.bossProjectiles = s.bossProjectiles.filter(p => {
+            p.x += p.vx; p.y += p.vy;
+            if (p.y >= GROUND_Y - 8) {
+              // 착탄: 플레이어와 X 거리 체크
+              if (Math.abs(s.player.x - p.targetX) < p.impactR && s.playerInvincible <= 0) {
                 if (s.shield) {
                   s.shield = false;
-                  showMsg("🛡️ 방패가 보스 공격을 막았다!", true);
+                  showMsg("🛡️ 방패가 공격을 막았다!", true);
                 } else {
                   s.playerHp = Math.max(0, s.playerHp - 1);
                   s.playerInvincible = 120;
@@ -1815,36 +1853,19 @@ export default function WildCatch() {
                   if (s.playerHp <= 0) {
                     s.gameOver = true; setGameOver(true);
                   } else {
-                    showMsg(`💥 보스의 공격! HP: ${"❤️".repeat(s.playerHp)}`, false);
+                    showMsg(`💥 공격 맞았다! HP: ${"❤️".repeat(s.playerHp)}`, false);
                   }
                 }
+              } else {
+                spawnParticles(p.targetX, GROUND_Y - 5, false);
               }
-              s.bossChargeState = "returning";
+              return false;
             }
-            // 원점에서 280px 이상 이동하면 복귀
-            const odx = mon.x - s.bossOriginX;
-            const ody = mon.y - s.bossOriginY;
-            if (Math.sqrt(odx * odx + ody * ody) > 280) s.bossChargeState = "returning";
-            mon.x = Math.max(MON_R, Math.min(GW - MON_R, mon.x));
-            mon.y = Math.max(22, Math.min(GROUND_Y - 10, mon.y));
-          } else if (s.bossChargeState === "returning") {
-            const dx = s.bossOriginX - mon.x;
-            const dy = s.bossOriginY - mon.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 8) {
-              mon.x = s.bossOriginX; mon.y = s.bossOriginY;
-              s.bossChargeState = "idle";
-            } else {
-              mon.x += (dx / dist) * 8;
-              mon.y += (dy / dist) * 8;
-            }
-          }
-          // 무적 프레임 차감
-          if (s.playerInvincible > 0) s.playerInvincible--;
-        } else if (!s.monster?.boss) {
-          // 보스 없으면 무적 프레임만 차감
-          if (s.playerInvincible > 0) s.playerInvincible--;
+            return true;
+          });
         }
+        // 무적 프레임 차감
+        if (s.playerInvincible > 0) s.playerInvincible--;
 
         // ── monster timer ──
         if (s.phase === "playing" && s.monster && !s.ball.active) {
@@ -1905,30 +1926,10 @@ export default function WildCatch() {
             ctx.shadowBlur = 0; ctx.globalAlpha = 1;
           }
         }
+        drawBossProjectiles();
         drawEffectHud();
         drawShieldHud();
         drawPlayerHp();
-        // ── 보스 돌진 경고/공격 텍스트 ──
-        if (s.monster && s.monster.boss) {
-          if (s.bossChargeState === "warning") {
-            const pulse = 0.75 + 0.25 * Math.sin(Date.now() * 0.05);
-            ctx.globalAlpha = pulse;
-            ctx.fillStyle = "#FF1744";
-            ctx.font = "bold 20px 'Noto Sans KR', monospace";
-            ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.shadowColor = "#FF1744"; ctx.shadowBlur = 18;
-            ctx.fillText("⚠️ 공격한다! 피해!", GW / 2, GH - 80);
-            ctx.shadowBlur = 0; ctx.globalAlpha = 1;
-          } else if (s.bossChargeState === "charging") {
-            ctx.globalAlpha = 0.9;
-            ctx.fillStyle = "#FF6D00";
-            ctx.font = "bold 18px 'Noto Sans KR', monospace";
-            ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.shadowColor = "#FF6D00"; ctx.shadowBlur = 14;
-            ctx.fillText("💨 돌진!", GW / 2, GH - 80);
-            ctx.shadowBlur = 0; ctx.globalAlpha = 1;
-          }
-        }
         if (s.shake > 0) s.shake--;
         drawPlayer(s.player.x, s.shake);
       }
@@ -2236,7 +2237,7 @@ export default function WildCatch() {
             s.difficulty = null; s.paused = true; s.totalScore = 0;
             s.rewind = false; s.sniperTimer = 0; s.feverTimer = 0; s.freezeTimer = 0; s.doubleNext = false;
             s.playerHp = 5; s.playerMaxHp = 5; s.playerInvincible = 0;
-            s.bossChargeState = "idle"; s.bossChargeTimer = 0; s.bossChargeWarnTimer = 0;
+            s.bossAttackTimer = 0; s.bossPreAttack = null; s.bossProjectiles = [];
             setGameOver(false);
             setDifficulty(null);
             setPlayTime(0);
@@ -2399,11 +2400,10 @@ function RulesModal({ onClose }) {
       title: "❤️ 플레이어 HP",
       items: [
         "HP ❤️×5로 시작 (화면 좌상단 표시)",
-        "보스 몬스터가 주기적으로 플레이어를 향해 돌진!",
-        "빨간 링 경고 후 0.8초 뒤 돌진 — 옆으로 피하세요!",
+        "보스 몬스터가 주기적으로 공격 볼을 발사!",
+        "바닥 빨간 원 = 착탄 지점 — 원 밖으로 이동해 피하세요!",
         "피격 시 HP -1, 2초간 무적",
-        "이지 모드: 돌진 주기 6초 + 경고 시간 1.5초 (여유 있음)",
-        "하드 모드: 돌진 주기 4초 + 경고 시간 0.8초 (빠름)",
+        "이지: 6초마다 공격, 경고 1.2초 / 하드: 3.5초마다 공격, 경고 0.6초",
         "🛡️ 방패 아이템으로 돌진 1회 막기 가능",
         "10마리 포획마다 💖 HP 1 자동 회복 (최대 5)",
         "HP 0 = 게임 오버!",
