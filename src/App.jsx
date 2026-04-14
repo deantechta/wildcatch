@@ -2031,7 +2031,7 @@ export default function WildCatch() {
           // Easy: 6초(일반)/5초(파워)  |  Hard: 3.5초(일반)/2.5초(파워)
           const attackInterval = isEasy
             ? (s.monster.power ? 300 : 360)
-            : (s.monster.power ? 150 : 210);
+            : 120; // Hard: 2초
           // 발사 전 경고 단계 (Easy: 1.2초=72f, Hard: 0.6초=36f)
           const warnFrames = isEasy ? 72 : 36;
           const impactR = isEasy ? 48 : 60;
