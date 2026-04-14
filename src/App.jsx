@@ -950,6 +950,7 @@ export default function WildCatch() {
         fever:     { icon: "🔥", label: "콤보불꽃!", color: "#FF6D00", bg: "rgba(255,109,0,0.22)" },
         freeze:    { icon: "🧊", label: "냉동!", color: "#00B0FF", bg: "rgba(0,176,255,0.22)" },
         double:    { icon: "💫", label: "더블!", color: "#F50057", bg: "rgba(245,0,87,0.22)" },
+        movefast:  { icon: "🏃", label: "무빙패스트!", color: "#76FF03", bg: "rgba(118,255,3,0.22)" },
       };
       const cfg = ITEM_CFG[type] || ITEM_CFG.speed;
 
@@ -998,9 +999,10 @@ export default function WildCatch() {
     // ── draw active effect HUD ──
     function drawEffectHud() {
       const EFFECT_MAP = {
-        speed:  { color: "#FFD700", icon: "⚡", label: "빠르게", timerKey: "effect" },
-        slow:   { color: "#00BCD4", icon: "🐌", label: "느리게", timerKey: "effect" },
-        magnet: { color: "#FF4081", icon: "🧲", label: "자석",   timerKey: "effect" },
+        speed:    { color: "#FFD700", icon: "⚡", label: "빠르게",    timerKey: "effect" },
+        slow:     { color: "#00BCD4", icon: "🐌", label: "느리게",    timerKey: "effect" },
+        magnet:   { color: "#FF4081", icon: "🧲", label: "자석",      timerKey: "effect" },
+        movefast: { color: "#76FF03", icon: "🏃", label: "무빙패스트", timerKey: "effect" },
       };
       const slots = [];
       if (s.effect && EFFECT_MAP[s.effect.type]) {
@@ -1718,9 +1720,9 @@ export default function WildCatch() {
 
           // Item spawn — 35% chance, only if no item already on field
           if (!s.item && Math.random() < 0.35) {
-            const itemTypes = ["speed","slow","magnet","shield","timeplus","autoCatch","rewind","sniper","fever","freeze","double"];
-            const w = 1/11;
-            const itemWeights = [w,w,w,w,w,w,w,w,w,w,w];
+            const itemTypes = ["speed","slow","magnet","shield","timeplus","autoCatch","rewind","sniper","fever","freeze","double","movefast"];
+            const w = 1/12;
+            const itemWeights = [w,w,w,w,w,w,w,w,w,w,w,w];
             let r = Math.random(), cumW = 0, type = "speed";
             for (let i = 0; i < itemTypes.length; i++) {
               cumW += itemWeights[i]; if (r < cumW) { type = itemTypes[i]; break; }
@@ -1734,7 +1736,7 @@ export default function WildCatch() {
               vy: (Math.random() > 0.5 ? 0.5 : -0.5) * 0.7,
               timer: 300,
             };
-            const itemNames = { speed:"⚡빠르게!", slow:"🐌느리게!", magnet:"🧲자석!", shield:"🛡️방패!", timeplus:"⏰시간+!", autoCatch:"🎫뽑기권!", rewind:"⏪되감기!", sniper:"🎯조준경!", fever:"🔥콤보불꽃!", freeze:"🧊냉동!", double:"💫더블!" };
+            const itemNames = { speed:"⚡빠르게!", slow:"🐌느리게!", magnet:"🧲자석!", shield:"🛡️방패!", timeplus:"⏰시간+!", autoCatch:"🎫뽑기권!", rewind:"⏪되감기!", sniper:"🎯조준경!", fever:"🔥콤보불꽃!", freeze:"🧊냉동!", double:"💫더블!", movefast:"🏃무빙패스트!" };
             showMsg(itemNames[type] + " 아이템 등장!", true);
           }
 
@@ -1800,7 +1802,7 @@ export default function WildCatch() {
         if (s.effect) {
           s.effect.timer--;
           if (s.effect.timer <= 0) {
-            const endMsg = { speed: "⚡ 볼 가속 종료!", slow: "🐌 느리게 종료!", magnet: "🧲 자석 종료!" };
+            const endMsg = { speed: "⚡ 볼 가속 종료!", slow: "🐌 느리게 종료!", magnet: "🧲 자석 종료!", movefast: "🏃 무빙패스트 종료!" };
             showMsg(endMsg[s.effect.type] || "이펙트 종료!", false);
             s.effect = null;
           }
@@ -1809,9 +1811,10 @@ export default function WildCatch() {
         if (s.feverTimer > 0)  { s.feverTimer--;  if (s.feverTimer === 0)  showMsg("🔥 콤보 불꽃 종료!", false); }
         if (s.freezeTimer > 0) { s.freezeTimer--; if (s.freezeTimer === 0) showMsg("🧊 냉동 종료!", false); }
 
-        // ── player movement (speed effect → 볼 속도 증가, 이동속도 기본값) ──
-        if (s.keys.has("ArrowLeft"))  s.player.x = Math.max(22, s.player.x - 5);
-        if (s.keys.has("ArrowRight")) s.player.x = Math.min(GW - 22, s.player.x + 5);
+        // ── player movement (movefast → 이동속도 30% 증가) ──
+        const moveMult = (s.effect && s.effect.type === "movefast") ? 1.3 : 1.0;
+        if (s.keys.has("ArrowLeft"))  s.player.x = Math.max(22, s.player.x - 5 * moveMult);
+        if (s.keys.has("ArrowRight")) s.player.x = Math.min(GW - 22, s.player.x + 5 * moveMult);
 
         if (s.ball.active) {
           const speedBoost = (s.effect && s.effect.type === "speed") ? 1.3 : 1.0;
@@ -1856,9 +1859,9 @@ export default function WildCatch() {
                 showMsg(`놓쳤다! (${s.missStreak}/${limit})`, false);
                 // 7번 연속 miss → 도움 아이템 자동 등장
                 if (s.missStreak >= 7 && !s.item) {
-                  // 확률: slow(30%)>speed(25%)>shield(20%)>autoCatch(15%)>magnet(7%)>timeplus(3%)
-                  const helpWeights = [0.30,0.25,0.20,0.15,0.07,0.03];
-                  const helpTypes   = ["slow","speed","shield","autoCatch","magnet","timeplus"];
+                  // 확률: slow(28%)>speed(23%)>shield(19%)>autoCatch(14%)>movefast(10%)>magnet(4%)>timeplus(2%)
+                  const helpWeights = [0.28,0.23,0.19,0.14,0.10,0.04,0.02];
+                  const helpTypes   = ["slow","speed","shield","autoCatch","movefast","magnet","timeplus"];
                   let hr = Math.random(), hc = 0, helpType = "shield";
                   for (let i = 0; i < helpWeights.length; i++) { hc += helpWeights[i]; if (hr < hc) { helpType = helpTypes[i]; break; } }
                   s.item = {
@@ -1894,9 +1897,9 @@ export default function WildCatch() {
               s.ball.active = false;
               spawnParticles(s.ball.x, s.ball.y, true);
 
-              if (type === "speed" || type === "slow" || type === "magnet") {
+              if (type === "speed" || type === "slow" || type === "magnet" || type === "movefast") {
                 s.effect = { type, timer: 300 };
-                const effectMsg = { speed: "⚡ 볼 발사 30% 빠르게! 5초!", slow: "🐌 느리게 5초!", magnet: "🧲 자석! 5초간 몬스터가 다가온다!" };
+                const effectMsg = { speed: "⚡ 볼 발사 30% 빠르게! 5초!", slow: "🐌 느리게 5초!", magnet: "🧲 자석! 5초간 몬스터가 다가온다!", movefast: "🏃 무빙패스트! 이동속도 30% UP! 5초!" };
                 showMsg(effectMsg[type], true);
               } else if (type === "shield") {
                 s.shield = true;
@@ -1906,12 +1909,12 @@ export default function WildCatch() {
                 showMsg("⏰ 시간 +10초!", true);
               } else if (type === "autoCatch") {
                 // 뽑기권: 10가지 아이템 중 랜덤 1개 (동일 확률 10%)
-                const lootAll = ["speed","slow","magnet","shield","timeplus","rewind","sniper","fever","freeze","double"];
+                const lootAll = ["speed","slow","magnet","shield","timeplus","rewind","sniper","fever","freeze","double","movefast"];
                 const lootType = lootAll[Math.floor(Math.random() * lootAll.length)];
                 const lootPfx = "🎫 뽑기! ";
-                if (lootType === "speed" || lootType === "slow" || lootType === "magnet") {
+                if (lootType === "speed" || lootType === "slow" || lootType === "magnet" || lootType === "movefast") {
                   s.effect = { type: lootType, timer: 300 };
-                  const em = { speed: "⚡ 빠르게 5초!", slow: "🐌 느리게 5초!", magnet: "🧲 자석 5초!" };
+                  const em = { speed: "⚡ 빠르게 5초!", slow: "🐌 느리게 5초!", magnet: "🧲 자석 5초!", movefast: "🏃 무빙패스트 5초!" };
                   showMsg(lootPfx + em[lootType], true);
                 } else if (lootType === "shield") {
                   s.shield = true; showMsg(lootPfx + "🛡️ 방패!", true);
@@ -2737,20 +2740,21 @@ function RulesModal({ onClose }) {
       ],
     },
     {
-      title: "🎁 아이템 (11종)",
+      title: "🎁 아이템 (12종)",
       items: [
-        "포획 성공 후 35% 확률로 11종 아이템 등장 (균등 확률)",
+        "포획 성공 후 35% 확률로 12종 아이템 등장 (균등 확률)",
         "⚡빠르게: 5초간 볼 발사 속도 30% 증가",
         "🐌느리게: 5초간 몬스터 속도 35%로 감소",
         "🧲자석: 5초간 몬스터가 플레이어 쪽으로 이동",
         "🛡️방패: 다음 볼 miss 1회 무효",
         "⏰시간+: 몬스터 제한 시간 +10초",
-        "🎫뽑기권: 나머지 10종 중 랜덤 1개 발동! (각 10%)",
+        "🎫뽑기권: 나머지 11종 중 랜덤 1개 발동!",
         "⏪되감기: 볼이 화면 밖으로 나가도 되돌아옴 (miss 무효)",
         "🎯조준경: 5초간 볼이 몬스터 방향 자동 추적",
         "🔥콤보불꽃: 10초간 포획마다 콤보 +2씩 적립",
         "🧊냉동: 3초간 몬스터 완전 정지",
         "💫더블: 다음 포획 1회 XP·점수 ×3",
+        "🏃무빙패스트: 5초간 캐릭터 이동속도 30% 증가",
         "5초 안에 볼로 맞추지 않으면 도망!",
       ],
     },
