@@ -2060,12 +2060,22 @@ export default function WildCatch() {
             s.bossAttackTimer++;
             if (s.bossAttackTimer >= attackInterval) {
               s.bossAttackTimer = 0;
-              // Hard + HP ≤ 3: 3지점 동시 공격
-              const tripleAttack = !isEasy && s.monster.hp <= 3;
+              // Hard: 기본 3존, HP ≤ 5 → 5존
               const px = s.player.x;
-              const targets = tripleAttack ? [px - 90, px, px + 90] : [px];
+              let targets;
+              let attackMsg;
+              if (isEasy) {
+                targets = [px];
+                attackMsg = "⚠️ 공격! 빨간 원을 피해!";
+              } else if (s.monster.hp <= 5) {
+                targets = [px - 160, px - 80, px, px + 80, px + 160];
+                attackMsg = "⚠️ 5존 공격! 피해!";
+              } else {
+                targets = [px - 90, px, px + 90];
+                attackMsg = "⚠️ 3존 공격! 피해!";
+              }
               s.bossPreAttack = { targets, timer: warnFrames, impactR };
-              showMsg(tripleAttack ? "⚠️ 3방향 공격! 피해!" : "⚠️ 공격! 빨간 원을 피해!", false);
+              showMsg(attackMsg, false);
             }
           }
         } else {
