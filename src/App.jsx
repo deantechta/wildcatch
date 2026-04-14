@@ -296,6 +296,16 @@ export default function WildCatch() {
     feverTimer: 0,        // 콤보 불꽃 남은 프레임 (600 = 10s)
     freezeTimer: 0,       // 냉동 남은 프레임 (180 = 3s)
     doubleNext: false,    // 더블: 다음 1회 포획 XP/점수 ×3
+    playerHp: 5,          // 플레이어 HP (최대 5)
+    playerMaxHp: 5,
+    playerInvincible: 0,  // 피격 후 무적 프레임 (120 = 2초)
+    bossChargeState: "idle", // idle | warning | charging | returning
+    bossChargeTimer: 0,
+    bossChargeWarnTimer: 0,
+    bossOriginX: 0,
+    bossOriginY: 0,
+    bossChargeDx: 0,
+    bossChargeDy: 0,
   });
 
   const [ui, setUi] = useState({
@@ -828,6 +838,21 @@ export default function WildCatch() {
     // ── draw shield HUD (legacy, now handled in drawEffectHud) ──
     function drawShieldHud() {}
 
+    // ── draw player HP (hearts, top-left) ──
+    function drawPlayerHp() {
+      const hp = s.playerHp, maxHp = s.playerMaxHp;
+      // 피격 무적 중 깜박임
+      if (s.playerInvincible > 0 && Math.floor(s.playerInvincible / 6) % 2 === 0) return;
+      ctx.font = "15px serif";
+      ctx.textBaseline = "top";
+      ctx.textAlign = "left";
+      for (let i = 0; i < maxHp; i++) {
+        ctx.globalAlpha = i < hp ? 1 : 0.2;
+        ctx.fillText("❤️", 8 + i * 19, 8);
+      }
+      ctx.globalAlpha = 1;
+    }
+
     function roundRect(c, x, y, w, h, r) {
       c.beginPath();
       c.moveTo(x + r, y);
@@ -937,6 +962,23 @@ export default function WildCatch() {
 
       ctx.shadowBlur = 0;
       if (mon.boss) {
+        // 보스 돌진 경고: 빨간 링 깜박임
+        if (s.bossChargeState === "warning") {
+          const pulse = 0.55 + 0.45 * Math.sin(Date.now() * 0.05);
+          ctx.strokeStyle = `rgba(255, 60, 60, ${pulse})`;
+          ctx.lineWidth = 6;
+          ctx.shadowColor = "#FF0000"; ctx.shadowBlur = 22;
+          ctx.beginPath(); ctx.arc(mx, my, 68, 0, Math.PI * 2); ctx.stroke();
+          ctx.shadowBlur = 0; ctx.lineWidth = 1;
+        }
+        // 돌진 중: 빨간 잔상 흔적
+        if (s.bossChargeState === "charging") {
+          ctx.strokeStyle = "rgba(255,100,100,0.7)";
+          ctx.lineWidth = 4;
+          ctx.shadowColor = "#FF4444"; ctx.shadowBlur = 14;
+          ctx.beginPath(); ctx.arc(mx, my, 68, 0, Math.PI * 2); ctx.stroke();
+          ctx.shadowBlur = 0; ctx.lineWidth = 1;
+        }
         // pixel art boss sprite
         drawBossSprite(mon, mx, my, t);
         // boss HP display
@@ -1279,6 +1321,11 @@ export default function WildCatch() {
             const wasSpecial = s.monster.special;
             s.collection.push({ ...s.monster });
             s.totalCaught++;
+            // 10마리마다 HP 1 회복 (최대 5)
+            if (s.totalCaught % 10 === 0 && s.playerHp < s.playerMaxHp) {
+              s.playerHp = Math.min(s.playerMaxHp, s.playerHp + 1);
+              showMsg("💖 HP 회복!", true);
+            }
             s.xp += wasPower ? 100 * (s.goldenTime ? 2 : 1) : wasBoss ? 50 * (s.goldenTime ? 2 : 1) : s.monster.level * (s.goldenTime ? 2 : 1);
 
             // combo & miss reset
@@ -1386,6 +1433,9 @@ export default function WildCatch() {
             s.monster.name = bd.name;
             s.monster.bossType = bd.type;
             if (s.difficulty !== "easy") { s.monster.vx *= 1.5; s.monster.vy *= 1.5; }
+            // 보스 돌진 상태 초기화
+            s.bossChargeState = "idle";
+            s.bossChargeTimer = 0;
             if (bd.power) {
               showMsg(`⚡ 파워 포켓몬이 나타났다! (경험치 2배!)`, false);
             } else {
@@ -1715,6 +1765,81 @@ export default function WildCatch() {
           } // end else (not frozen)
         }
 
+        // ── boss charge attack ──
+        if (s.monster && s.monster.boss && s.phase === "playing" && s.difficulty !== "easy" && s.freezeTimer <= 0) {
+          const mon = s.monster;
+          const chargeInterval = mon.power ? 180 : 240; // 파워: 3초, 일반: 4초
+          if (s.bossChargeState === "idle") {
+            s.bossChargeTimer++;
+            if (s.bossChargeTimer >= chargeInterval) {
+              s.bossChargeTimer = 0;
+              s.bossChargeState = "warning";
+              s.bossChargeWarnTimer = 48; // 경고 0.8초
+            }
+          } else if (s.bossChargeState === "warning") {
+            s.bossChargeWarnTimer--;
+            if (s.bossChargeWarnTimer <= 0) {
+              // 플레이어 방향으로 돌진 벡터 고정
+              const dx = s.player.x - mon.x;
+              const dy = (GROUND_Y - PLAYER_H / 2) - mon.y;
+              const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+              s.bossChargeDx = dx / dist;
+              s.bossChargeDy = dy / dist;
+              s.bossOriginX = mon.x;
+              s.bossOriginY = mon.y;
+              s.bossChargeState = "charging";
+            }
+          } else if (s.bossChargeState === "charging") {
+            const SPEED = 14;
+            mon.x += s.bossChargeDx * SPEED;
+            mon.y += s.bossChargeDy * SPEED;
+            // 플레이어 충돌 감지
+            const pdx = mon.x - s.player.x;
+            const pdy = mon.y - (GROUND_Y - PLAYER_H / 2);
+            if (Math.sqrt(pdx * pdx + pdy * pdy) < 38) {
+              if (s.playerInvincible <= 0) {
+                if (s.shield) {
+                  s.shield = false;
+                  showMsg("🛡️ 방패가 보스 공격을 막았다!", true);
+                } else {
+                  s.playerHp = Math.max(0, s.playerHp - 1);
+                  s.playerInvincible = 120;
+                  s.shake = 25;
+                  spawnParticles(s.player.x, GROUND_Y - PLAYER_H / 2, false);
+                  if (s.playerHp <= 0) {
+                    s.gameOver = true; setGameOver(true);
+                  } else {
+                    showMsg(`💥 보스의 공격! HP: ${"❤️".repeat(s.playerHp)}`, false);
+                  }
+                }
+              }
+              s.bossChargeState = "returning";
+            }
+            // 원점에서 220px 이상 이동하면 복귀
+            const odx = mon.x - s.bossOriginX;
+            const ody = mon.y - s.bossOriginY;
+            if (Math.sqrt(odx * odx + ody * ody) > 220) s.bossChargeState = "returning";
+            mon.x = Math.max(MON_R, Math.min(GW - MON_R, mon.x));
+            mon.y = Math.max(22, Math.min(GROUND_Y - 10, mon.y));
+          } else if (s.bossChargeState === "returning") {
+            const dx = s.bossOriginX - mon.x;
+            const dy = s.bossOriginY - mon.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 8) {
+              mon.x = s.bossOriginX; mon.y = s.bossOriginY;
+              s.bossChargeState = "idle";
+            } else {
+              mon.x += (dx / dist) * 8;
+              mon.y += (dy / dist) * 8;
+            }
+          }
+          // 무적 프레임 차감
+          if (s.playerInvincible > 0) s.playerInvincible--;
+        } else if (!s.monster?.boss) {
+          // 보스 없으면 무적 프레임만 차감
+          if (s.playerInvincible > 0) s.playerInvincible--;
+        }
+
         // ── monster timer ──
         if (s.phase === "playing" && s.monster && !s.ball.active) {
           s.monTimer--;
@@ -1776,6 +1901,7 @@ export default function WildCatch() {
         }
         drawEffectHud();
         drawShieldHud();
+        drawPlayerHp();
         if (s.shake > 0) s.shake--;
         drawPlayer(s.player.x, s.shake);
       }
@@ -2082,6 +2208,8 @@ export default function WildCatch() {
             s.charXp = 0; s.bossCatchBanner = 0;
             s.difficulty = null; s.paused = true; s.totalScore = 0;
             s.rewind = false; s.sniperTimer = 0; s.feverTimer = 0; s.freezeTimer = 0; s.doubleNext = false;
+            s.playerHp = 5; s.playerMaxHp = 5; s.playerInvincible = 0;
+            s.bossChargeState = "idle"; s.bossChargeTimer = 0; s.bossChargeWarnTimer = 0;
             setGameOver(false);
             setDifficulty(null);
             setPlayTime(0);
@@ -2238,6 +2366,18 @@ function RulesModal({ onClose }) {
         "← → (방향키 또는 ◀ ▶ 버튼) 으로 이동",
         "Space 또는 ⚡던지기! 버튼으로 볼 발사",
         "볼이 몬스터에 맞으면 포획 시도!",
+      ],
+    },
+    {
+      title: "❤️ 플레이어 HP",
+      items: [
+        "HP ❤️×5로 시작 (화면 좌상단 표시)",
+        "보스 몬스터가 주기적으로 플레이어를 향해 돌진!",
+        "빨간 링 경고 후 0.8초 뒤 돌진 — 옆으로 피하세요!",
+        "피격 시 HP -1, 2초간 무적 (이지 모드: 돌진 없음)",
+        "🛡️ 방패 아이템으로 돌진 1회 막기 가능",
+        "10마리 포획마다 💖 HP 1 자동 회복 (최대 5)",
+        "HP 0 = 게임 오버!",
       ],
     },
     {
