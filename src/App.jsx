@@ -1877,9 +1877,9 @@ export default function WildCatch() {
           s.monTimer--;
           if (s.monTimer <= 0) {
             if (s.monster.boss) {
-              // 보스는 도망치지 않음 — 타이머만 리셋
-              s.monTimer = 1500;
-              showMsg("👑 보스는 도망치지 않는다!", false);
+              // 보스 타임아웃 → 게임오버
+              s.gameOver = true;
+              setGameOver(true);
             } else {
               // 시간 초과 → 도망 처리 + 위기 카운트다운 시작
               s.combo = 0;
