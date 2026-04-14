@@ -861,24 +861,26 @@ export default function WildCatch() {
 
     // ── boss projectiles & pre-attack warning ──
     function drawBossProjectiles() {
-      // 발사 전 경고: 바닥에 깜박이는 빨간 타원
+      // 발사 전 경고: 바닥에 깜박이는 빨간 타원 (targets 배열 순회)
       if (s.bossPreAttack) {
-        const { targetX, impactR } = s.bossPreAttack;
+        const { targets, impactR } = s.bossPreAttack;
         const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.04);
-        ctx.globalAlpha = 0.35 + 0.45 * pulse;
-        ctx.fillStyle = "#FF1744";
-        ctx.shadowColor = "#FF1744"; ctx.shadowBlur = 18;
-        ctx.beginPath();
-        ctx.ellipse(targetX, GROUND_Y - 4, impactR, impactR * 0.28, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0; ctx.globalAlpha = 1;
-        // 테두리 링
-        ctx.strokeStyle = `rgba(255,80,80,${0.7 + 0.3 * pulse})`;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.ellipse(targetX, GROUND_Y - 4, impactR, impactR * 0.28, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.lineWidth = 1;
+        targets.forEach(targetX => {
+          ctx.globalAlpha = 0.35 + 0.45 * pulse;
+          ctx.fillStyle = "#FF1744";
+          ctx.shadowColor = "#FF1744"; ctx.shadowBlur = 18;
+          ctx.beginPath();
+          ctx.ellipse(targetX, GROUND_Y - 4, impactR, impactR * 0.28, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+          // 테두리 링
+          ctx.strokeStyle = `rgba(255,80,80,${0.7 + 0.3 * pulse})`;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.ellipse(targetX, GROUND_Y - 4, impactR, impactR * 0.28, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.lineWidth = 1;
+        });
       }
       // 날아오는 투사체
       s.bossProjectiles.forEach(p => {
@@ -1092,7 +1094,6 @@ export default function WildCatch() {
 
     // ── boss pixel art sprite (GBA 스타일 도트 디자인, 20종) ──
     function drawBossSprite(mon, mx, my, t) {
-      const sc = 9;
       const pulse = 1 + 0.04 * Math.sin(t * 0.04);
       ctx.save();
       ctx.translate(mx, my);
@@ -1315,6 +1316,11 @@ export default function WildCatch() {
           if (ok && s.monster.boss && s.monster.hp > 1) {
             s.monster.hp--;
             s.monster.stunTimer = 30; // 0.5초 스턴
+            // 스턴 후 랜덤 방향으로 이동 (같은 자리에서 계속 맞추는 것 방지)
+            const bossSpeed = 1.8 + Math.random() * 1.8;
+            const bossAngle = Math.random() * Math.PI * 2;
+            s.monster.vx = Math.cos(bossAngle) * bossSpeed;
+            s.monster.vy = Math.sin(bossAngle) * bossSpeed * 0.5;
             s.monTimer = Math.min(s.monTimer + 300, 1500); // 맞을 때마다 +5초 (최대 25초)
             s.phase = "playing";
             spawnParticles(s.monster.x, s.monster.y, true);
@@ -1811,18 +1817,19 @@ export default function WildCatch() {
             // 경고 카운트다운 — 이 시간 동안 바닥에 빨간 원 표시
             s.bossPreAttack.timer--;
             if (s.bossPreAttack.timer <= 0) {
-              // 경고 종료 → 실제 발사
-              const targetX = s.bossPreAttack.targetX;
-              const dx = targetX - s.monster.x;
-              const dy = GROUND_Y - s.monster.y;
-              const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+              // 경고 종료 → 실제 발사 (targets 배열의 각 위치로 투사체 발사)
               const speed = isEasy ? 5 : 8;
-              s.bossProjectiles.push({
-                x: s.monster.x, y: s.monster.y,
-                vx: (dx / dist) * speed,
-                vy: (dy / dist) * speed,
-                targetX,
-                impactR,
+              s.bossPreAttack.targets.forEach(targetX => {
+                const dx = targetX - s.monster.x;
+                const dy = GROUND_Y - s.monster.y;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                s.bossProjectiles.push({
+                  x: s.monster.x, y: s.monster.y,
+                  vx: (dx / dist) * speed,
+                  vy: (dy / dist) * speed,
+                  targetX,
+                  impactR,
+                });
               });
               s.bossPreAttack = null;
             }
@@ -1830,9 +1837,12 @@ export default function WildCatch() {
             s.bossAttackTimer++;
             if (s.bossAttackTimer >= attackInterval) {
               s.bossAttackTimer = 0;
-              // 경고 시작: 현재 플레이어 위치를 타깃으로 고정
-              s.bossPreAttack = { targetX: s.player.x, timer: warnFrames, impactR };
-              showMsg("⚠️ 공격! 빨간 원을 피해!", false);
+              // Hard + HP ≤ 3: 3지점 동시 공격
+              const tripleAttack = !isEasy && s.monster.hp <= 3;
+              const px = s.player.x;
+              const targets = tripleAttack ? [px - 90, px, px + 90] : [px];
+              s.bossPreAttack = { targets, timer: warnFrames, impactR };
+              showMsg(tripleAttack ? "⚠️ 3방향 공격! 피해!" : "⚠️ 공격! 빨간 원을 피해!", false);
             }
           }
         } else {
