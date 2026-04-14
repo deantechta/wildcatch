@@ -3039,39 +3039,42 @@ function QuizModal({ quiz, onAnswer }) {
 
         {/* 4지선다 — onPointerDown으로 모바일 300ms 딜레이 제거 */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-          {quiz.choices.map((n, i) => (
-            <button
-              key={n}
-              onPointerDown={(e) => { e.preventDefault(); onAnswer(n); }}
-              style={{
-                padding: "16px 0", fontSize: 22, fontWeight: "bold",
-                background: quiz.wrong && n === quiz.answer
-                  ? "rgba(105,240,174,0.25)" : "rgba(255,255,255,0.10)",
-                border: quiz.wrong && n === quiz.answer
-                  ? "2px solid #69F0AE" : `2px solid ${opColor}55`,
-                borderRadius: 12, color: "#E8EAF6", cursor: "pointer",
-                fontFamily: "monospace",
-                touchAction: "manipulation",
-                WebkitTapHighlightColor: "transparent",
-                userSelect: "none", WebkitUserSelect: "none",
-              }}
-            >
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+          {quiz.choices.map((n, i) => {
+            const isCorrectHint = quiz.wrong && n === quiz.answer;
+            const badgeColor = isCorrectHint ? "#69F0AE" : opColor;
+            return (
+              <button
+                key={n}
+                onPointerDown={(e) => { e.preventDefault(); onAnswer(n); }}
+                style={{
+                  padding: "14px 8px 14px",
+                  background: isCorrectHint ? "rgba(105,240,174,0.15)" : "rgba(255,255,255,0.08)",
+                  border: isCorrectHint ? "2px solid #69F0AE" : `2px solid ${opColor}55`,
+                  borderRadius: 14, color: "#E8EAF6", cursor: "pointer",
+                  fontFamily: "monospace", display: "flex", flexDirection: "column",
+                  alignItems: "center", gap: 8,
+                  touchAction: "manipulation",
+                  WebkitTapHighlightColor: "transparent",
+                  userSelect: "none", WebkitUserSelect: "none",
+                }}
+              >
+                {/* 번호 뱃지 — 원형 */}
                 <span style={{
                   display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  width: 24, height: 24, borderRadius: "50%",
-                  background: quiz.wrong && n === quiz.answer ? "#69F0AE22" : `${opColor}22`,
-                  border: `1.5px solid ${quiz.wrong && n === quiz.answer ? "#69F0AE" : opColor}`,
-                  fontSize: 11, fontWeight: "bold", color: quiz.wrong && n === quiz.answer ? "#69F0AE" : opColor,
-                  fontFamily: "'Noto Sans KR', sans-serif",
-                  lineHeight: 1,
+                  width: 36, height: 36, borderRadius: "50%",
+                  background: `${badgeColor}1A`,
+                  border: `2px solid ${badgeColor}`,
+                  fontSize: 13, fontWeight: "bold", color: badgeColor,
+                  fontFamily: "'Noto Sans KR', monospace",
+                  lineHeight: 1, flexShrink: 0,
                 }}>
                   {i + 1}번
                 </span>
-                <span style={{ fontSize: 22, fontWeight: "bold", lineHeight: 1 }}>{n}</span>
-              </div>
-            </button>
-          ))}
+                {/* 정답 숫자 */}
+                <span style={{ fontSize: 26, fontWeight: "bold", color: "#E8EAF6", lineHeight: 1 }}>{n}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* 키보드 직접 입력 (선택사항) */}
