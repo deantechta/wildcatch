@@ -1704,6 +1704,8 @@ export default function WildCatch() {
         if (s.monster) {
           if (s.freezeTimer > 0) {
             // 냉동: 몬스터 완전 정지 (움직임 생략)
+          } else if (s.monster.boss && (s.bossChargeState === "charging" || s.bossChargeState === "returning")) {
+            // 보스 돌진/복귀 중에는 일반 이동 건너뜀 (charge 코드가 직접 위치 제어)
           } else {
           const slowFactor = (s.effect && s.effect.type === "slow") ? 0.35 : 1;
           const mon = s.monster;
@@ -1797,10 +1799,10 @@ export default function WildCatch() {
             const SPEED = 14;
             mon.x += s.bossChargeDx * SPEED;
             mon.y += s.bossChargeDy * SPEED;
-            // 플레이어 충돌 감지
+            // 플레이어 충돌 감지 (히트박스 반경 55px)
             const pdx = mon.x - s.player.x;
             const pdy = mon.y - (GROUND_Y - PLAYER_H / 2);
-            if (Math.sqrt(pdx * pdx + pdy * pdy) < 38) {
+            if (Math.sqrt(pdx * pdx + pdy * pdy) < 55) {
               if (s.playerInvincible <= 0) {
                 if (s.shield) {
                   s.shield = false;
@@ -1819,10 +1821,10 @@ export default function WildCatch() {
               }
               s.bossChargeState = "returning";
             }
-            // 원점에서 220px 이상 이동하면 복귀
+            // 원점에서 280px 이상 이동하면 복귀
             const odx = mon.x - s.bossOriginX;
             const ody = mon.y - s.bossOriginY;
-            if (Math.sqrt(odx * odx + ody * ody) > 220) s.bossChargeState = "returning";
+            if (Math.sqrt(odx * odx + ody * ody) > 280) s.bossChargeState = "returning";
             mon.x = Math.max(MON_R, Math.min(GW - MON_R, mon.x));
             mon.y = Math.max(22, Math.min(GROUND_Y - 10, mon.y));
           } else if (s.bossChargeState === "returning") {
@@ -1906,6 +1908,27 @@ export default function WildCatch() {
         drawEffectHud();
         drawShieldHud();
         drawPlayerHp();
+        // ── 보스 돌진 경고/공격 텍스트 ──
+        if (s.monster && s.monster.boss) {
+          if (s.bossChargeState === "warning") {
+            const pulse = 0.75 + 0.25 * Math.sin(Date.now() * 0.05);
+            ctx.globalAlpha = pulse;
+            ctx.fillStyle = "#FF1744";
+            ctx.font = "bold 20px 'Noto Sans KR', monospace";
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.shadowColor = "#FF1744"; ctx.shadowBlur = 18;
+            ctx.fillText("⚠️ 공격한다! 피해!", GW / 2, GH - 80);
+            ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+          } else if (s.bossChargeState === "charging") {
+            ctx.globalAlpha = 0.9;
+            ctx.fillStyle = "#FF6D00";
+            ctx.font = "bold 18px 'Noto Sans KR', monospace";
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.shadowColor = "#FF6D00"; ctx.shadowBlur = 14;
+            ctx.fillText("💨 돌진!", GW / 2, GH - 80);
+            ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+          }
+        }
         if (s.shake > 0) s.shake--;
         drawPlayer(s.player.x, s.shake);
       }
