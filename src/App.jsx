@@ -2150,7 +2150,6 @@ export default function WildCatch() {
         const golden = s.goldenBall;
         if (golden) s.goldenBall = false;
         s.ball = { x: s.player.x, y: GROUND_Y - PLAYER_H + 8, active: true, golden, rainbowTrail: golden ? [] : null };
-        if (navigator.vibrate) navigator.vibrate(25);
       }
       if (["ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
     }
@@ -2196,7 +2195,6 @@ export default function WildCatch() {
       const golden = s.goldenBall;
       if (golden) s.goldenBall = false;
       s.ball = { x: s.player.x, y: GROUND_Y - PLAYER_H + 8, active: true, golden, rainbowTrail: golden ? [] : null };
-      if (navigator.vibrate) navigator.vibrate(25);
     }
   };
 
