@@ -663,6 +663,12 @@ export default function WildCatch() {
       const x = px + ox;
       const by = GROUND_Y - PLAYER_H;
       const theme = getCharTheme(s.charLvl);
+      ctx.save();
+      // 피격 후 빨간 깜빡임: 5프레임마다 교대
+      if (s.playerInvincible > 0) {
+        const blink = Math.floor(s.playerInvincible / 5) % 2 === 0;
+        ctx.globalAlpha = blink ? 0.2 : 1;
+      }
 
       // Level-up aura glow
       if (s.levelUpTimer > 0) {
@@ -801,6 +807,14 @@ export default function WildCatch() {
       ctx.stroke(); ctx.lineWidth = 1;
       ctx.fillStyle = "rgba(255,255,255,0.35)";
       ctx.beginPath(); ctx.arc(x + 19, by + 26, 3.5, 0, Math.PI * 2); ctx.fill();
+
+      // 피격 시 빨간 오버레이 (불투명 프레임에만)
+      if (s.playerInvincible > 0 && Math.floor(s.playerInvincible / 5) % 2 !== 0) {
+        ctx.globalAlpha = 0.45;
+        ctx.fillStyle = "#FF1744";
+        ctx.fillRect(x - 28, by - 15, 56, PLAYER_H + 10);
+      }
+      ctx.restore();
     }
 
     // ── draw flying ball ──
