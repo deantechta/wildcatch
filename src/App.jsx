@@ -2341,7 +2341,7 @@ function DifficultyModal({ onSelect }) {
       alignItems: "center", justifyContent: "center",
       zIndex: 9999, overflowY: "auto",
     }}>
-      <div style={{ fontSize: 32, marginBottom: 4 }}>🌟 준이 캐치 🌟</div>
+      <div style={{ fontSize: 32, marginBottom: 4 }}>🌟 이준 캐치 🌟</div>
       <div style={{ color: "#aaa", fontSize: 13, marginBottom: 24, fontFamily: "'Noto Sans KR', monospace" }}>난이도를 선택하세요</div>
 
       {/* EASY */}
