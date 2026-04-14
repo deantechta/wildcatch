@@ -122,15 +122,15 @@ const MONSTERS = [
 
 // ── Boss Monster Definitions (이름만 — 픽셀아트는 drawBossSprite에서 개별 구현) ──
 const BOSS_MONSTERS = [
-  { name: "피카추" },   { name: "라이추" },   { name: "리자드" },   { name: "파이리" },
-  { name: "꼬부기" },   { name: "거북왕" },   { name: "팬텀" },     { name: "이상해씨" },
-  { name: "리자몽" },   { name: "잠만보" },
-  { name: "이브이" },   { name: "뮤츠" },     { name: "뮤" },       { name: "푸린" },
-  { name: "망나뇽" },   { name: "이상해꽃" }, { name: "후딘" },     { name: "붐볼" },
-  { name: "식스테일" }, { name: "가디" },
-  { name: "이상해풀" }, { name: "어니부기" }, { name: "버터플" },   { name: "아보크" },
-  { name: "나인테일" }, { name: "윈디" },     { name: "수륙챙이" }, { name: "우츠보트" },
-  { name: "독파리" },   { name: "질뻐기" },
+  { name: "피카추" },              { name: "라이추" },   { name: "리자드" },              { name: "파이리" },
+  { name: "꼬부기" },              { name: "거북왕", power: true },   { name: "팬텀" },     { name: "이상해씨" },
+  { name: "리자몽", power: true }, { name: "잠만보" },
+  { name: "이브이" },              { name: "뮤츠", power: true },     { name: "뮤", power: true },       { name: "푸린" },
+  { name: "망나뇽", power: true }, { name: "이상해꽃", power: true }, { name: "후딘", power: true },     { name: "붐볼" },
+  { name: "식스테일" },            { name: "가디" },
+  { name: "이상해풀" },            { name: "어니부기" }, { name: "버터플" },              { name: "아보크" },
+  { name: "나인테일", power: true }, { name: "윈디" },   { name: "수륙챙이" },            { name: "우츠보트" },
+  { name: "독파리" },              { name: "질뻐기" },
 ];
 
 const RARITY_COLOR = {
@@ -1244,7 +1244,7 @@ export default function WildCatch() {
           const ok = s.ball.golden || Math.random() < rate;
           s.ball.active = false;
 
-          // 보스 타격 처리 (HP 10→9→...→1→0)
+          // 보스 타격 처리 (HP n→n-1)
           if (ok && s.monster.boss && s.monster.hp > 1) {
             s.monster.hp--;
             s.phase = "playing";
@@ -1253,11 +1253,24 @@ export default function WildCatch() {
             s.raf = requestAnimationFrame(loop); return;
           }
 
+          // 파워 포켓몬 최종 타격 — 30~50% 포획 확률
+          if (ok && s.monster.boss && s.monster.power) {
+            const catchChance = 0.30 + Math.random() * 0.20;
+            if (Math.random() >= catchChance) {
+              s.ball.active = false;
+              s.phase = "playing";
+              spawnParticles(s.monster.x, s.monster.y, false);
+              showMsg(`💨 포획 실패! 파워 포켓몬이 버텼다! ❤️ HP 1 남음`, false);
+              s.raf = requestAnimationFrame(loop); return;
+            }
+          }
+
           if (ok) {
             spawnParticles(s.monster.x, s.monster.y, true);
             spawnMonsterParticles(s.monster);
             s.flashTimer = 8; // 화면 플래시
             const wasBoss = s.monster.boss;
+            const wasPower = s.monster.power;
             if (wasBoss) {
               s.bossCatchBanner = 240; // 4초 배너
               spawnLevelUpEffect(s.monster.x, s.monster.y);
@@ -1266,7 +1279,7 @@ export default function WildCatch() {
             const wasSpecial = s.monster.special;
             s.collection.push({ ...s.monster });
             s.totalCaught++;
-            s.xp += wasBoss ? 50 * (s.goldenTime ? 2 : 1) : s.monster.level * (s.goldenTime ? 2 : 1);
+            s.xp += wasPower ? 100 * (s.goldenTime ? 2 : 1) : wasBoss ? 50 * (s.goldenTime ? 2 : 1) : s.monster.level * (s.goldenTime ? 2 : 1);
 
             // combo & miss reset
             s.combo += s.feverTimer > 0 ? 2 : 1; // 콤보 불꽃: 2콤보씩 적립
@@ -1359,16 +1372,25 @@ export default function WildCatch() {
           s.monster = spawnMonster(s.ballLvl, s.charLvl, isBossSpawn ? false : isSpecialSpawn, s.difficulty || "hard");
           s.monTimer = 900;
           if (isBossSpawn) {
-            const bd = BOSS_MONSTERS[Math.floor(Math.random() * BOSS_MONSTERS.length)];
+            const powerList = BOSS_MONSTERS.filter(b => b.power);
+            const regularList = BOSS_MONSTERS.filter(b => !b.power);
+            const isPower = Math.random() < 0.5 && powerList.length > 0;
+            const pool = isPower ? powerList : regularList;
+            const bd = pool[Math.floor(Math.random() * pool.length)];
             s.monster.boss = true;
-            s.monster.hp = 10;
+            s.monster.power = !!bd.power;
+            s.monster.hp = bd.power ? 15 : 10;
             s.monster.level = 10;
             s.monster.rarity = "legend";
             s.monster.emoji = "👑";
             s.monster.name = bd.name;
             s.monster.bossType = bd.type;
             if (s.difficulty !== "easy") { s.monster.vx *= 1.5; s.monster.vy *= 1.5; }
-            showMsg(`👑 ${bd.name} 등장!! 10번 맞춰야 잡힌다!`, false);
+            if (bd.power) {
+              showMsg(`⚡ 파워 포켓몬이 나타났다! (경험치 2배!)`, false);
+            } else {
+              showMsg(`👑 ${bd.name} 등장!! 10번 맞춰야 잡힌다!`, false);
+            }
           } else if (isSpecialSpawn) {
             showMsg("🌟 특별 몬스터 등장!", true);
           }
@@ -2320,6 +2342,18 @@ function RulesModal({ onClose }) {
         "포획 시 XP 50 획득 (lv10 몬스터의 5배)",
         "포획 성공 시 👑 보스 포켓몬 캐치! 배너 등장",
         "황금볼 활용 추천!",
+      ],
+    },
+    {
+      title: "⚡ 파워 포켓몬",
+      items: [
+        "보스 등장 시 50% 확률로 파워 포켓몬 출현!",
+        "거북왕·리자몽·뮤츠·뮤·망나뇽·이상해꽃·후딘·나인테일",
+        "HP ❤️×15 — 15번 맞춰야 포획 시도됨",
+        "15번 타격 후 포획 확률 30~50% (랜덤)",
+        "포획 실패 시 HP 1로 유지 — 계속 도전 가능!",
+        "포획 성공 시 XP 100 획득 (경험치 2배!)",
+        "등장 메시지: ⚡ 파워 포켓몬이 나타났다! (경험치 2배!)",
       ],
     },
     {
