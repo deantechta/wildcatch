@@ -1766,15 +1766,19 @@ export default function WildCatch() {
         }
 
         // ── boss charge attack ──
-        if (s.monster && s.monster.boss && s.phase === "playing" && s.difficulty !== "easy" && s.freezeTimer <= 0) {
+        if (s.monster && s.monster.boss && s.phase === "playing" && s.freezeTimer <= 0) {
           const mon = s.monster;
-          const chargeInterval = mon.power ? 180 : 240; // 파워: 3초, 일반: 4초
+          const isEasy = s.difficulty === "easy";
+          // Easy: 6초(일반) / 5초(파워) | Hard: 4초(일반) / 3초(파워)
+          const chargeInterval = isEasy
+            ? (mon.power ? 300 : 360)
+            : (mon.power ? 180 : 240);
           if (s.bossChargeState === "idle") {
             s.bossChargeTimer++;
             if (s.bossChargeTimer >= chargeInterval) {
               s.bossChargeTimer = 0;
               s.bossChargeState = "warning";
-              s.bossChargeWarnTimer = 48; // 경고 0.8초
+              s.bossChargeWarnTimer = isEasy ? 90 : 48; // Easy: 1.5초 | Hard: 0.8초
             }
           } else if (s.bossChargeState === "warning") {
             s.bossChargeWarnTimer--;
@@ -2374,7 +2378,9 @@ function RulesModal({ onClose }) {
         "HP ❤️×5로 시작 (화면 좌상단 표시)",
         "보스 몬스터가 주기적으로 플레이어를 향해 돌진!",
         "빨간 링 경고 후 0.8초 뒤 돌진 — 옆으로 피하세요!",
-        "피격 시 HP -1, 2초간 무적 (이지 모드: 돌진 없음)",
+        "피격 시 HP -1, 2초간 무적",
+        "이지 모드: 돌진 주기 6초 + 경고 시간 1.5초 (여유 있음)",
+        "하드 모드: 돌진 주기 4초 + 경고 시간 0.8초 (빠름)",
         "🛡️ 방패 아이템으로 돌진 1회 막기 가능",
         "10마리 포획마다 💖 HP 1 자동 회복 (최대 5)",
         "HP 0 = 게임 오버!",
