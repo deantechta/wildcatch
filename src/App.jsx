@@ -2060,7 +2060,7 @@ export default function WildCatch() {
             s.bossAttackTimer++;
             if (s.bossAttackTimer >= attackInterval) {
               s.bossAttackTimer = 0;
-              // Hard: 기본 3존, HP ≤ 5 → 5존
+              // Hard: 기본 3존, HP ≤ 5 → 4존
               const px = s.player.x;
               let targets;
               let attackMsg;
@@ -2068,10 +2068,10 @@ export default function WildCatch() {
                 targets = [px];
                 attackMsg = "⚠️ 공격! 빨간 원을 피해!";
               } else if (s.monster.hp <= 5) {
-                targets = [px - 160, px - 80, px, px + 80, px + 160];
-                attackMsg = "⚠️ 5존 공격! 피해!";
+                targets = [px - 108, px - 36, px + 36, px + 108];
+                attackMsg = "⚠️ 4존 공격! 피해!";
               } else {
-                targets = [px - 90, px, px + 90];
+                targets = [px - 81, px, px + 81];
                 attackMsg = "⚠️ 3존 공격! 피해!";
               }
               s.bossPreAttack = { targets, timer: warnFrames, impactR };
