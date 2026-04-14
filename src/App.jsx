@@ -1315,6 +1315,7 @@ export default function WildCatch() {
           if (ok && s.monster.boss && s.monster.hp > 1) {
             s.monster.hp--;
             s.monster.stunTimer = 30; // 0.5초 스턴
+            s.monTimer = Math.min(s.monTimer + 300, 1500); // 맞을 때마다 +5초 (최대 25초)
             s.phase = "playing";
             spawnParticles(s.monster.x, s.monster.y, true);
             showMsg(`💥 보스 HP: ${"❤️".repeat(s.monster.hp)} 남았다!`, true);
