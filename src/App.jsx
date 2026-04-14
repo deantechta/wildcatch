@@ -128,6 +128,9 @@ const BOSS_MONSTERS = [
   { name: "이브이" },   { name: "뮤츠" },     { name: "뮤" },       { name: "푸린" },
   { name: "망나뇽" },   { name: "이상해꽃" }, { name: "후딘" },     { name: "붐볼" },
   { name: "식스테일" }, { name: "가디" },
+  { name: "이상해풀" }, { name: "어니부기" }, { name: "버터플" },   { name: "아보크" },
+  { name: "나인테일" }, { name: "윈디" },     { name: "수륙챙이" }, { name: "우츠보트" },
+  { name: "독파리" },   { name: "질뻐기" },
 ];
 
 const RARITY_COLOR = {
