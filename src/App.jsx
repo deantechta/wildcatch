@@ -1632,12 +1632,23 @@ export default function WildCatch() {
             s.phase = "playing";
             spawnParticles(s.monster.x, s.monster.y, true);
 
+            // ── 하드 모드: 경고 앞 절반에서만 공격 캔슬 가능 ──
+            let attackCancelled = false;
+            if (s.bossPreAttack && s.difficulty !== "easy") {
+              if (s.bossPreAttack.timer > s.bossPreAttack.warnFrames / 2) {
+                // 앞 절반 타이밍: 캔슬 성공
+                s.bossPreAttack = null;
+                s.bossAttackTimer = 0;
+                attackCancelled = true;
+              }
+              // 뒷 절반 타이밍: 캔슬 실패 — 공격 그대로 진행
+            }
+
             // 직전 피격 위치와 80px 이내 → "같은 자리 연속" 판정 → 순간이동
             const sameSpot = Math.abs(s.monster.x - s.bossLastHitX) < 80;
             s.bossLastHitX = s.monster.x;
 
             if (sameSpot) {
-              // 화면 반대쪽 랜덤 위치로 순간이동 + 1초 무적
               const half = GW / 2;
               const newX = s.monster.x < half
                 ? half + 40 + Math.random() * (half - 80)
@@ -1645,17 +1656,18 @@ export default function WildCatch() {
               const newY = 40 + Math.random() * (GROUND_Y * 0.45);
               s.monster.x = newX;
               s.monster.y = newY;
-              s.bossInvincible = 60; // 1초 무적
+              s.bossInvincible = 60;
               s.monster.stunTimer = 20;
-              showMsg(`💥 보스 HP: ${"❤️".repeat(s.monster.hp)} — 순간이동!`, true);
+              const cancelTag = attackCancelled ? " ⚡캔슬!" : s.bossPreAttack ? " 공격 주의!" : "";
+              showMsg(`💥 보스 HP: ${"❤️".repeat(s.monster.hp)} — 순간이동!${cancelTag}`, true);
             } else {
-              // 일반 피격: 랜덤 방향으로 이동
               s.monster.stunTimer = 30;
               const spd = 1.8 + Math.random() * 1.8;
               const ang = Math.random() * Math.PI * 2;
               s.monster.vx = Math.cos(ang) * spd;
               s.monster.vy = Math.sin(ang) * spd * 0.5;
-              showMsg(`💥 보스 HP: ${"❤️".repeat(s.monster.hp)} 남았다!`, true);
+              const cancelTag = attackCancelled ? " ⚡캔슬!" : s.bossPreAttack ? " ⚠️공격 계속!" : "";
+              showMsg(`💥 보스 HP: ${"❤️".repeat(s.monster.hp)} 남았다!${cancelTag}`, true);
             }
             s.raf = requestAnimationFrame(loop); return;
           }
@@ -2186,45 +2198,40 @@ export default function WildCatch() {
           } // end else (not frozen)
         }
 
-        // ── boss projectile attack ──
+        // ── boss preAttack timer: catching 중에도 계속 진행 (하드 난이도 조정) ──
+        if (s.monster && s.monster.boss && s.bossPreAttack && s.freezeTimer <= 0) {
+          s.bossPreAttack.timer--;
+          if (s.bossPreAttack.timer <= 0) {
+            const spd = s.difficulty === "easy" ? 5 : 8;
+            s.bossPreAttack.targets.forEach(targetX => {
+              const dx = targetX - s.monster.x;
+              const dy = GROUND_Y - s.monster.y;
+              const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+              s.bossProjectiles.push({
+                x: s.monster.x, y: s.monster.y,
+                vx: (dx / dist) * spd,
+                vy: (dy / dist) * spd,
+                targetX,
+                impactR: s.bossPreAttack.impactR,
+              });
+            });
+            s.bossPreAttack = null;
+          }
+        }
+
+        // ── boss 공격 트리거 (playing 중에만) ──
         if (s.monster && s.monster.boss && s.phase === "playing" && s.freezeTimer <= 0) {
           const isEasy = s.difficulty === "easy";
-          // Easy: 6초(일반)/5초(파워)  |  Hard: 3.5초(일반)/2.5초(파워)
-          const attackInterval = isEasy
-            ? (s.monster.power ? 300 : 360)
-            : 120; // Hard: 2초
-          // 발사 전 경고 단계 (Easy: 1.2초=72f, Hard: 0.6초=36f)
+          const attackInterval = isEasy ? (s.monster.power ? 300 : 360) : 120;
           const warnFrames = isEasy ? 72 : 36;
           const impactR = isEasy ? 48 : 60;
 
-          if (s.bossPreAttack) {
-            // 경고 카운트다운 — 이 시간 동안 바닥에 빨간 원 표시
-            s.bossPreAttack.timer--;
-            if (s.bossPreAttack.timer <= 0) {
-              // 경고 종료 → 실제 발사 (targets 배열의 각 위치로 투사체 발사)
-              const speed = isEasy ? 5 : 8;
-              s.bossPreAttack.targets.forEach(targetX => {
-                const dx = targetX - s.monster.x;
-                const dy = GROUND_Y - s.monster.y;
-                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                s.bossProjectiles.push({
-                  x: s.monster.x, y: s.monster.y,
-                  vx: (dx / dist) * speed,
-                  vy: (dy / dist) * speed,
-                  targetX,
-                  impactR,
-                });
-              });
-              s.bossPreAttack = null;
-            }
-          } else {
+          if (!s.bossPreAttack) {
             s.bossAttackTimer++;
             if (s.bossAttackTimer >= attackInterval) {
               s.bossAttackTimer = 0;
-              // Hard: 기본 3존, HP ≤ 5 → 4존
               const px = s.player.x;
-              let targets;
-              let attackMsg;
+              let targets, attackMsg;
               if (isEasy) {
                 targets = [px];
                 attackMsg = "⚠️ 공격! 빨간 원을 피해!";
@@ -2235,11 +2242,12 @@ export default function WildCatch() {
                 targets = [px - 81, px, px + 81];
                 attackMsg = "⚠️ 3존 공격! 피해!";
               }
-              s.bossPreAttack = { targets, timer: warnFrames, impactR };
+              // warnFrames 저장: 피격 시 앞/뒤 절반 판정에 사용
+              s.bossPreAttack = { targets, timer: warnFrames, warnFrames, impactR };
               showMsg(attackMsg, false);
             }
           }
-        } else {
+        } else if (!s.monster || !s.monster.boss) {
           // 보스 없어지면 경고/투사체 초기화
           s.bossPreAttack = null;
           s.bossProjectiles = [];
