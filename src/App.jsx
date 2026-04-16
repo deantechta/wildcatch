@@ -2709,7 +2709,7 @@ export default function WildCatch() {
           <DifficultyModal onSelect={(diff) => {
             const s = gs.current;
             s.difficulty = diff;
-            if (diff === "hard") { s.playerHp = 3; s.playerMaxHp = 3; }
+            if (diff === "hard") { s.playerHp = 4; s.playerMaxHp = 4; }
             s.paused = false;
             s.monster = spawnMonster(1, s.charLvl, false, diff);
             setDifficulty(diff);
