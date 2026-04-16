@@ -312,6 +312,7 @@ export default function WildCatch() {
     bossProjectiles: [],  // [{ x, y, vx, vy, targetX, impactR }]
     bossLastHitX: -999,   // 직전 피격 시 보스 X 위치
     bossInvincible: 0,    // 순간이동 후 무적 프레임 (60 = 1초)
+    bossHitCombo: 0,      // 보스 연속 피격 콤보 카운터
   });
 
   const [ui, setUi] = useState({
@@ -1635,8 +1636,8 @@ export default function WildCatch() {
             // ── 하드 모드: 경고 앞 절반에서만 공격 캔슬 가능 ──
             let attackCancelled = false;
             if (s.bossPreAttack && s.difficulty !== "easy") {
-              if (s.bossPreAttack.timer > s.bossPreAttack.warnFrames / 2) {
-                // 앞 절반 타이밍: 캔슬 성공
+              if (s.bossPreAttack.timer > s.bossPreAttack.warnFrames / 3) {
+                // 앞 2/3 타이밍 (0.4초): 캔슬 성공
                 s.bossPreAttack = null;
                 s.bossAttackTimer = 0;
                 attackCancelled = true;
@@ -1647,6 +1648,16 @@ export default function WildCatch() {
             // 직전 피격 위치와 80px 이내 → "같은 자리 연속" 판정 → 순간이동
             const sameSpot = Math.abs(s.monster.x - s.bossLastHitX) < 80;
             s.bossLastHitX = s.monster.x;
+
+            // 보스 연속 피격 콤보 카운터
+            s.bossHitCombo++;
+            let healMsg = "";
+            if (s.bossHitCombo >= 3 && s.bossHitCombo % 3 === 0) {
+              if (s.playerHp < s.playerMaxHp) {
+                s.playerHp = Math.min(s.playerMaxHp, s.playerHp + 1);
+                healMsg = ` 💖 HP+1!`;
+              }
+            }
 
             if (sameSpot) {
               const half = GW / 2;
@@ -1659,7 +1670,7 @@ export default function WildCatch() {
               s.bossInvincible = 60;
               s.monster.stunTimer = 20;
               const cancelTag = attackCancelled ? " ⚡캔슬!" : s.bossPreAttack ? " 공격 주의!" : "";
-              showMsg(`💥 보스 HP: ${"❤️".repeat(s.monster.hp)} — 순간이동!${cancelTag}`, true);
+              showMsg(`💥 보스 HP: ${"❤️".repeat(s.monster.hp)} — 순간이동!${cancelTag}${healMsg}`, true);
             } else {
               s.monster.stunTimer = 30;
               const spd = 1.8 + Math.random() * 1.8;
@@ -1667,7 +1678,7 @@ export default function WildCatch() {
               s.monster.vx = Math.cos(ang) * spd;
               s.monster.vy = Math.sin(ang) * spd * 0.5;
               const cancelTag = attackCancelled ? " ⚡캔슬!" : s.bossPreAttack ? " ⚠️공격 계속!" : "";
-              showMsg(`💥 보스 HP: ${"❤️".repeat(s.monster.hp)} 남았다!${cancelTag}`, true);
+              showMsg(`💥 보스 HP: ${"❤️".repeat(s.monster.hp)} 남았다!${cancelTag}${healMsg}`, true);
             }
             s.raf = requestAnimationFrame(loop); return;
           }
@@ -1776,7 +1787,8 @@ export default function WildCatch() {
             spawnParticles(s.monster.x, s.monster.y, false);
             s.shake = 20;
             if (s.monster.boss) {
-              // 보스는 도망치지 않음 — 그 자리에 유지
+              // 보스는 도망치지 않음 — 그 자리에 유지, 콤보 리셋
+              s.bossHitCombo = 0;
               showMsg(`💨 빗나갔다! 보스 HP: ${"❤️".repeat(s.monster.hp)}`, false);
               s.raf = requestAnimationFrame(loop); return;
             }
@@ -1811,7 +1823,7 @@ export default function WildCatch() {
             const bd = pool[Math.floor(Math.random() * pool.length)];
             s.monster.boss = true;
             s.monster.power = !!bd.power;
-            s.monster.hp = bd.power ? 15 : 10;
+            s.monster.hp = bd.power ? 12 : 7;
             s.monster.level = 10;
             s.monster.rarity = "legend";
             s.monster.emoji = "👑";
@@ -2687,7 +2699,7 @@ export default function WildCatch() {
             s.rewind = false; s.sniperTimer = 0; s.feverTimer = 0; s.freezeTimer = 0; s.doubleNext = false;
             s.playerHp = 5; s.playerMaxHp = 5; s.playerInvincible = 0;
             s.bossAttackTimer = 0; s.bossPreAttack = null; s.bossProjectiles = [];
-            s.bossLastHitX = -999; s.bossInvincible = 0;
+            s.bossLastHitX = -999; s.bossInvincible = 0; s.bossHitCombo = 0;
             setGameOver(false);
             setDifficulty(null);
             setPlayTime(0);
