@@ -141,15 +141,19 @@ const RARITY_COLOR = {
 const BALL_COLORS = [
   "#E53935","#F57C00","#FBC02D","#2E7D32","#00838F",
   "#1565C0","#6A1B9A","#AD1457","#4E342E","#F9A825",
+  "#FF1744","#D500F9","#00E5FF","#76FF03","#FF6D00",
+  "#AA00FF","#1DE9B6","#FFD600","#FF4081","#ECEFF1",
 ];
 
 const BALL_NAMES = [
   "WildBall","SuperBall","HyperBall","MegaBall","UltraBall",
   "MasterBall","DarkBall","StarBall","CosmoBall","OmegaBall",
+  "PrimeBall","AbyssBall","NovaBall","PlasmaBall","FrostBall",
+  "NebulaBall","ShadowBall","VoidBall","CometBall","GodBall",
 ];
 
 // XP required to reach next ball level (index = ballLvl-1)
-const XP_REQ = [4, 9, 16, 26, 40, 60, 88, 125, 175, Infinity];
+const XP_REQ = [4, 9, 16, 26, 40, 60, 88, 125, 175, 240, 320, 420, 540, 680, 840, 1020, 1220, 1440, 1680, Infinity];
 
 // 캐릭터 XP — 레벨별 필요 경험치 (index = charLvl-1, 총 49개)
 // lv1 몬스터(1XP) 기준 포획 수: Lv1-10≈10마리, Lv10-20≈20마리(lv5 기준), Lv20-30≈43마리(lv7 기준), ...
@@ -165,10 +169,11 @@ const CHAR_XP_REQ = [
 function ballSpeedMult(charLvl) {
   return 1.0 + Math.floor(charLvl / 10) * 0.1; // lv10:1.1x, lv20:1.2x ... lv50:1.5x
 }
-// 볼 레벨 이펙트 단계마다 발사 속도 +5% (Lv1:1.0x ... Lv8+:1.35x)
+// 볼 레벨별 발사 속도: 2단계 선형 증가
+// lv1: 100% → lv10: 181% → lv20: 350%
 function ballLvlSpeedMult(ballLvl) {
-  // lv1: 1.0(100%) → lv8: 2.0(200%), 선형 증가
-  return 1.0 + (Math.min(ballLvl, 8) - 1) * (1.0 / 7);
+  if (ballLvl <= 10) return 1.0 + (ballLvl - 1) * 0.09;
+  return 1.81 + (ballLvl - 10) * 0.169;
 }
 
 // 캐릭터 XP → 레벨 변환
@@ -283,7 +288,10 @@ export default function WildCatch() {
     paused: true,   // 난이도 선택 전까지 정지
     difficulty: null,
     dangerTimer: 0, // 시간 초과 탈출 후 10초 게임오버 카운트다운
-    shield: false,        // 방패 아이템: 다음 miss 1회 무효
+    shield: false,        // (unused legacy)
+    bigBallTimer: 0,      // 볼 확대 아이템: 5초간 히트박스 2배
+    multiShotTimer: 0,    // 멀티샷 아이템: 5초간 볼 3개 동시 발사
+    sideBalls: [],        // 멀티샷 보조 볼 [{x, y, trail, rainbowTrail, golden}]
     flashTimer: 0,        // 포획 성공 화면 플래시
     comboPopTimer: 0,     // 콤보 팝업 타이머
     comboPopValue: 0,     // 팝업에 표시할 콤보 값
@@ -341,7 +349,7 @@ export default function WildCatch() {
       ballName: BALL_NAMES[s.ballLvl - 1],
       combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught,
       goldenBall: s.goldenBall, score: s.totalScore,
-      ballSpeed: Math.min(200, Math.round(Math.min(2.0, ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl)) * 100)),
+      ballSpeed: Math.min(350, Math.round(Math.min(3.5, ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl)) * 100)),
       catchPct: pct,
       charLvl: s.charLvl,
     });
@@ -365,7 +373,7 @@ export default function WildCatch() {
       const req = XP_REQ[s.ballLvl - 1] === Infinity ? 999 : XP_REQ[s.ballLvl - 1];
       const mon = s.monster;
       const pct = mon ? Math.round(catchRate(s.ballLvl, mon.level) * 100) : 0;
-      setUi(prev => ({ ...prev, message: "", xp: s.xp, xpReq: req, totalCaught: s.totalCaught, catchPct: pct, charLvl: s.charLvl, combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught, goldenBall: s.goldenBall, score: s.totalScore, ballSpeed: Math.min(200, Math.round(Math.min(2.0, ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl)) * 100)) }));
+      setUi(prev => ({ ...prev, message: "", xp: s.xp, xpReq: req, totalCaught: s.totalCaught, catchPct: pct, charLvl: s.charLvl, combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught, goldenBall: s.goldenBall, score: s.totalScore, ballSpeed: Math.min(350, Math.round(Math.min(3.5, ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl)) * 100)) }));
     }, 2200);
   }
 
@@ -823,16 +831,67 @@ export default function WildCatch() {
       const c = isGolden ? "#FFD700" : BALL_COLORS[s.ballLvl - 1];
       const blvl = s.ballLvl;
 
-      // ── 8-tier level effects ──
+      // ── 20-tier level effects ──
+      const T = Date.now();
       if (!isGolden && blvl >= 2 && s.ball.trail && s.ball.trail.length > 0) {
         s.ball.trail.forEach((pt, i) => {
           const ratio = i / s.ball.trail.length;
-          if (blvl >= 8) {
-            // Tier 8: rainbow trail
+          if (blvl >= 20) {
+            // Tier 20 (GodBall): multi-color layered trail
+            ctx.globalAlpha = ratio * 0.75;
+            ctx.fillStyle = `hsl(${(T * 0.6 + i * 18) % 360},100%,75%)`;
+            ctx.shadowColor = `hsl(${(T * 0.4 + i * 24) % 360},100%,60%)`; ctx.shadowBlur = 14;
+          } else if (blvl === 19) {
+            // Tier 19 (CometBall): golden + fiery trail
+            ctx.globalAlpha = ratio * 0.70;
+            ctx.fillStyle = `hsl(${40 + i * 4},100%,${55 + ratio * 20}%)`;
+            ctx.shadowColor = "#FFD600"; ctx.shadowBlur = 10;
+          } else if (blvl === 18) {
+            // Tier 18 (VoidBall): deep space dark purple glow
+            ctx.globalAlpha = ratio * 0.65;
+            ctx.fillStyle = `hsl(${270 + i * 5},100%,60%)`;
+            ctx.shadowColor = "#AA00FF"; ctx.shadowBlur = 10;
+          } else if (blvl === 17) {
+            // Tier 17 (ShadowBall): dark void + white pulse
             ctx.globalAlpha = ratio * 0.60;
-            ctx.fillStyle = `hsl(${(Date.now() * 0.4 + i * 28) % 360},100%,65%)`;
+            ctx.fillStyle = ratio > 0.5 ? "#fff" : "#1DE9B6";
+            ctx.shadowColor = "#1DE9B6"; ctx.shadowBlur = 8;
+          } else if (blvl === 16) {
+            // Tier 16 (NebulaBall): plasma lightning zigzag
+            ctx.globalAlpha = ratio * 0.65;
+            ctx.fillStyle = `hsl(${200 + i * 10},100%,65%)`;
+            ctx.shadowColor = c; ctx.shadowBlur = 12;
+          } else if (blvl === 15) {
+            // Tier 15 (FrostBall): ice crystal blue-white
+            ctx.globalAlpha = ratio * 0.62;
+            ctx.fillStyle = i % 2 === 0 ? "#B3E5FC" : "#FFFFFF";
+            ctx.shadowColor = "#00E5FF"; ctx.shadowBlur = 8;
+          } else if (blvl === 14) {
+            // Tier 14 (PlasmaBall): neon green electric
+            ctx.globalAlpha = ratio * 0.60;
+            ctx.fillStyle = i % 2 === 0 ? "#76FF03" : "#CCFF90";
+            ctx.shadowColor = "#76FF03"; ctx.shadowBlur = 10;
+          } else if (blvl === 13) {
+            // Tier 13 (NovaBall): star burst — orange/yellow
+            ctx.globalAlpha = ratio * 0.60;
+            ctx.fillStyle = `hsl(${30 + i * 8},100%,${60 + ratio * 15}%)`;
+            ctx.shadowColor = "#FF6D00"; ctx.shadowBlur = 8;
+          } else if (blvl === 12) {
+            // Tier 12 (AbyssBall): deep crimson magenta
+            ctx.globalAlpha = ratio * 0.60;
+            ctx.fillStyle = `hsl(${310 + i * 6},100%,55%)`;
+            ctx.shadowColor = "#D500F9"; ctx.shadowBlur = 8;
+          } else if (blvl === 11) {
+            // Tier 11 (PrimeBall): vivid red shimmer
+            ctx.globalAlpha = ratio * 0.58;
+            ctx.fillStyle = i % 2 === 0 ? "#FF1744" : "#FF8A80";
+            ctx.shadowColor = "#FF1744"; ctx.shadowBlur = 6;
+          } else if (blvl >= 8) {
+            // Tier 8–10: rainbow trail
+            ctx.globalAlpha = ratio * 0.60;
+            ctx.fillStyle = `hsl(${(T * 0.4 + i * 28) % 360},100%,65%)`;
           } else if (blvl === 7) {
-            // Tier 7: double-layer trail (outer glow + inner color)
+            // Tier 7: double-layer trail
             ctx.globalAlpha = ratio * 0.25;
             ctx.fillStyle = "#fff";
             ctx.beginPath(); ctx.arc(pt.x, pt.y, BALL_R * (0.35 + ratio * 0.65), 0, Math.PI * 2); ctx.fill();
@@ -844,21 +903,13 @@ export default function WildCatch() {
             ctx.fillStyle = c;
             ctx.shadowColor = c; ctx.shadowBlur = 8;
           } else if (blvl === 5) {
-            // Tier 5: bright colored trail
-            ctx.globalAlpha = ratio * 0.48;
-            ctx.fillStyle = c;
+            ctx.globalAlpha = ratio * 0.48; ctx.fillStyle = c;
           } else if (blvl === 4) {
-            // Tier 4: colored trail
-            ctx.globalAlpha = ratio * 0.38;
-            ctx.fillStyle = c;
+            ctx.globalAlpha = ratio * 0.38; ctx.fillStyle = c;
           } else if (blvl === 3) {
-            // Tier 3: fade trail (slightly colored)
-            ctx.globalAlpha = ratio * 0.28;
-            ctx.fillStyle = c;
+            ctx.globalAlpha = ratio * 0.28; ctx.fillStyle = c;
           } else {
-            // Tier 2 (Lv2): subtle white fade
-            ctx.globalAlpha = ratio * 0.18;
-            ctx.fillStyle = "#fff";
+            ctx.globalAlpha = ratio * 0.18; ctx.fillStyle = "#fff";
           }
           const r = BALL_R * (0.22 + ratio * 0.55);
           ctx.beginPath(); ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2); ctx.fill();
@@ -867,15 +918,61 @@ export default function WildCatch() {
         ctx.globalAlpha = 1;
       }
 
-      // sparkle particles: Tier 5(Lv5)=3개, Tier 6(Lv6)=4개, Tier 7(Lv7)=5개, Tier 8(Lv8+)=6개+shadow
+      // ── Sparkle / orbit particles by tier ──
       if (!isGolden && blvl >= 5) {
-        const sparkCount = blvl >= 8 ? 6 : blvl >= 7 ? 5 : blvl >= 6 ? 4 : 3;
-        ctx.shadowColor = c; ctx.shadowBlur = blvl >= 8 ? 22 : blvl >= 7 ? 14 : 8;
+        const sparkCount = blvl >= 20 ? 10 : blvl >= 18 ? 8 : blvl >= 15 ? 7 : blvl >= 12 ? 6 : blvl >= 9 ? 6 : blvl >= 8 ? 6 : blvl >= 7 ? 5 : blvl >= 6 ? 4 : 3;
+        const sparkColor = blvl >= 20 ? `hsl(${(T*0.5)%360},100%,75%)` :
+                           blvl >= 19 ? "#FFD600" :
+                           blvl >= 18 ? "#AA00FF" :
+                           blvl >= 17 ? "#1DE9B6" :
+                           blvl >= 16 ? "#40C4FF" :
+                           blvl >= 15 ? "#B3E5FC" :
+                           blvl >= 14 ? "#76FF03" :
+                           blvl >= 13 ? "#FF6D00" :
+                           blvl >= 12 ? "#D500F9" :
+                           blvl >= 11 ? "#FF1744" :
+                           blvl >= 8  ? `hsl(${(T*0.3+sparkCount*60)%360},100%,70%)` :
+                           `rgba(255,255,255,0.85)`;
+        ctx.shadowColor = c; ctx.shadowBlur = blvl >= 18 ? 28 : blvl >= 14 ? 20 : blvl >= 10 ? 16 : blvl >= 8 ? 22 : blvl >= 7 ? 14 : 8;
         for (let i = 0; i < sparkCount; i++) {
-          const a = Date.now() * 0.007 + (i / sparkCount) * Math.PI * 2;
-          const sr = BALL_R + 5 + Math.sin(Date.now() * 0.012 + i) * 2;
-          ctx.fillStyle = blvl >= 8 ? `hsl(${(Date.now()*0.3+i*60)%360},100%,70%)` : `rgba(255,255,255,${0.75 - i * 0.08})`;
-          ctx.beginPath(); ctx.arc(bx + Math.cos(a) * sr * 0.45, by + Math.sin(a) * sr * 0.45, 2, 0, Math.PI * 2); ctx.fill();
+          const a = T * 0.007 + (i / sparkCount) * Math.PI * 2;
+          const sr = BALL_R + 5 + Math.sin(T * 0.012 + i) * 3;
+          ctx.fillStyle = blvl >= 20 ? `hsl(${(T*0.5+i*36)%360},100%,75%)` : sparkColor;
+          ctx.beginPath(); ctx.arc(bx + Math.cos(a) * sr * 0.5, by + Math.sin(a) * sr * 0.5, blvl >= 18 ? 3 : 2, 0, Math.PI * 2); ctx.fill();
+        }
+        // Tier 9+: extra outer ring
+        if (blvl >= 9) {
+          for (let i = 0; i < 4; i++) {
+            const a2 = T * (-0.005) + (i / 4) * Math.PI * 2;
+            const or = BALL_R + 10 + Math.sin(T * 0.008 + i) * 2;
+            ctx.fillStyle = blvl >= 20 ? `hsl(${(T*0.3+i*90)%360},100%,80%)` : c;
+            ctx.globalAlpha = 0.5;
+            ctx.beginPath(); ctx.arc(bx + Math.cos(a2) * or * 0.5, by + Math.sin(a2) * or * 0.5, 1.5, 0, Math.PI * 2); ctx.fill();
+            ctx.globalAlpha = 1;
+          }
+        }
+        // Tier 16+: rotating glow ring
+        if (blvl >= 16) {
+          ctx.save();
+          ctx.translate(bx, by);
+          ctx.rotate(T * 0.004);
+          ctx.strokeStyle = c + "88"; ctx.lineWidth = 2;
+          ctx.shadowColor = c; ctx.shadowBlur = 16;
+          ctx.beginPath(); ctx.arc(0, 0, BALL_R + 8, 0, Math.PI * 1.4); ctx.stroke();
+          ctx.rotate(Math.PI);
+          ctx.strokeStyle = sparkColor + "88";
+          ctx.beginPath(); ctx.arc(0, 0, BALL_R + 8, 0, Math.PI * 1.4); ctx.stroke();
+          ctx.restore();
+          ctx.shadowBlur = 0;
+        }
+        // Tier 20: full outer pulse ring
+        if (blvl >= 20) {
+          const pulse = 0.5 + 0.5 * Math.sin(T * 0.01);
+          ctx.strokeStyle = `hsla(${(T*0.4)%360},100%,75%,${0.4 + 0.4 * pulse})`;
+          ctx.lineWidth = 2.5;
+          ctx.shadowColor = `hsl(${(T*0.4)%360},100%,60%)`; ctx.shadowBlur = 20;
+          ctx.beginPath(); ctx.arc(bx, by, BALL_R + 14 + pulse * 4, 0, Math.PI * 2); ctx.stroke();
+          ctx.lineWidth = 1; ctx.shadowBlur = 0;
         }
         ctx.shadowBlur = 0;
       }
@@ -942,7 +1039,7 @@ export default function WildCatch() {
         speed:     { icon: "⚡", label: "빠르게!", color: "#FFD700", bg: "rgba(255,215,0,0.22)" },
         slow:      { icon: "🐌", label: "느리게!", color: "#00BCD4", bg: "rgba(0,188,212,0.22)" },
         magnet:    { icon: "🧲", label: "자석!",   color: "#FF4081", bg: "rgba(255,64,129,0.22)" },
-        shield:    { icon: "🛡️", label: "방패!",   color: "#69F0AE", bg: "rgba(105,240,174,0.22)" },
+        shield:    { icon: "🔵", label: "볼확대!",  color: "#69F0AE", bg: "rgba(105,240,174,0.22)" },
         timeplus:  { icon: "⏰", label: "시간+10!", color: "#FF9800", bg: "rgba(255,152,0,0.22)" },
         autoCatch: { icon: "🎫", label: "뽑기권!", color: "#E040FB", bg: "rgba(224,64,251,0.22)" },
         rewind:    { icon: "⏪", label: "되감기!", color: "#7C4DFF", bg: "rgba(124,77,255,0.22)" },
@@ -952,6 +1049,7 @@ export default function WildCatch() {
         double:    { icon: "💫", label: "더블!", color: "#F50057", bg: "rgba(245,0,87,0.22)" },
         movefast:  { icon: "🏃", label: "무빙패스트!", color: "#76FF03", bg: "rgba(118,255,3,0.22)" },
         heal:      { icon: "💊", label: "회복!", color: "#FF80AB", bg: "rgba(255,128,171,0.22)" },
+        multishot: { icon: "🔱", label: "멀티샷!", color: "#40C4FF", bg: "rgba(64,196,255,0.22)" },
       };
       const cfg = ITEM_CFG[type] || ITEM_CFG.speed;
 
@@ -1003,7 +1101,7 @@ export default function WildCatch() {
         speed:    { color: "#FFD700", icon: "⚡", label: "빠르게",    timerKey: "effect" },
         slow:     { color: "#00BCD4", icon: "🐌", label: "느리게",    timerKey: "effect" },
         magnet:   { color: "#FF4081", icon: "🧲", label: "자석",      timerKey: "effect" },
-        movefast: { color: "#76FF03", icon: "🏃", label: "무빙패스트", timerKey: "effect" },
+        movefast: { color: "#76FF03", icon: "🏃", label: "무빙50%", timerKey: "effect" },
       };
       const slots = [];
       if (s.effect && EFFECT_MAP[s.effect.type]) {
@@ -1016,8 +1114,10 @@ export default function WildCatch() {
         slots.push({ color: "#FF6D00", icon: "🔥", label: "콤보불꽃", secs: Math.ceil(s.feverTimer / 60) });
       if (s.freezeTimer > 0)
         slots.push({ color: "#00B0FF", icon: "🧊", label: "냉동", secs: Math.ceil(s.freezeTimer / 60) });
-      if (s.shield)
-        slots.push({ color: "#69F0AE", icon: "🛡️", label: "방패대기", secs: null });
+      if (s.bigBallTimer > 0)
+        slots.push({ color: "#69F0AE", icon: "🔵", label: "볼확대", secs: Math.ceil(s.bigBallTimer / 60) });
+      if (s.multiShotTimer > 0)
+        slots.push({ color: "#40C4FF", icon: "🔱", label: "멀티샷", secs: Math.ceil(s.multiShotTimer / 60) });
       if (s.rewind)
         slots.push({ color: "#7C4DFF", icon: "⏪", label: "되감기", secs: null });
       if (s.doubleNext)
@@ -1642,16 +1742,16 @@ export default function WildCatch() {
               s.charLvl = newCharLvl;
               spawnLevelUpEffect(s.player.x, GROUND_Y - PLAYER_H);
               const req = XP_REQ[s.ballLvl - 1];
-              if (s.ballLvl < 10 && req !== Infinity && s.xp >= req) {
+              if (s.ballLvl < 20 && req !== Infinity && s.xp >= req) {
                 s.xp -= req;
-                s.ballLvl = Math.min(10, s.ballLvl + 1);
+                s.ballLvl = Math.min(20, s.ballLvl + 1);
               }
               if (!wasSpecial) showMsg(`🎊 캐릭터 Lv.${s.charLvl} 달성!`, true);
             } else if (!wasSpecial) {
               const req = XP_REQ[s.ballLvl - 1];
-              if (s.ballLvl < 10 && req !== Infinity && s.xp >= req) {
+              if (s.ballLvl < 20 && req !== Infinity && s.xp >= req) {
                 s.xp -= req;
-                s.ballLvl = Math.min(10, s.ballLvl + 1);
+                s.ballLvl = Math.min(20, s.ballLvl + 1);
                 showMsg(`✨ 볼 Lv.${s.ballLvl}! ${BALL_NAMES[s.ballLvl-1]}!`, true);
               } else {
                 const comboMsgs = ["", "", "👍 2콤보!", "🔥 3콤보!", "💥 4콤보!", "⭐ 5콤보! 굉장해!", "🌟 6콤보!", "🚀 7콤보! 천재!", "👑 8콤보!", "💎 9콤보!", "🏆 10콤보!! 전설!"];
@@ -1721,9 +1821,9 @@ export default function WildCatch() {
 
           // Item spawn — 35% chance, only if no item already on field
           if (!s.item && Math.random() < 0.35) {
-            const itemTypes = ["speed","slow","magnet","shield","timeplus","autoCatch","rewind","sniper","fever","freeze","double","movefast","heal"];
-            const w = 1/13;
-            const itemWeights = [w,w,w,w,w,w,w,w,w,w,w,w,w];
+            const itemTypes = ["speed","slow","magnet","shield","timeplus","autoCatch","rewind","sniper","fever","freeze","double","movefast","heal","multishot"];
+            const w = 1/14;
+            const itemWeights = [w,w,w,w,w,w,w,w,w,w,w,w,w,w];
             let r = Math.random(), cumW = 0, type = "speed";
             for (let i = 0; i < itemTypes.length; i++) {
               cumW += itemWeights[i]; if (r < cumW) { type = itemTypes[i]; break; }
@@ -1737,7 +1837,7 @@ export default function WildCatch() {
               vy: (Math.random() > 0.5 ? 0.5 : -0.5) * 0.7,
               timer: 300,
             };
-            const itemNames = { speed:"⚡빠르게!", slow:"🐌느리게!", magnet:"🧲자석!", shield:"🛡️방패!", timeplus:"⏰시간+!", autoCatch:"🎫뽑기권!", rewind:"⏪되감기!", sniper:"🎯조준경!", fever:"🔥콤보불꽃!", freeze:"🧊냉동!", double:"💫더블!", movefast:"🏃무빙패스트!", heal:"💊회복!" };
+            const itemNames = { speed:"⚡빠르게!", slow:"🐌느리게!", magnet:"🧲자석!", shield:"🔵볼확대!", timeplus:"⏰시간+!", autoCatch:"🎫뽑기권!", rewind:"⏪되감기!", sniper:"🎯조준경!", fever:"🔥콤보불꽃!", freeze:"🧊냉동!", double:"💫더블!", movefast:"🏃무빙패스트50%!", heal:"💊회복!", multishot:"🔱멀티샷!" };
             showMsg(itemNames[type] + " 아이템 등장!", true);
           }
 
@@ -1812,15 +1912,20 @@ export default function WildCatch() {
         if (s.feverTimer > 0)  { s.feverTimer--;  if (s.feverTimer === 0)  showMsg("🔥 콤보 불꽃 종료!", false); }
         if (s.freezeTimer > 0) { s.freezeTimer--; if (s.freezeTimer === 0) showMsg("🧊 냉동 종료!", false); }
 
-        // ── player movement (movefast → 이동속도 30% 증가) ──
-        const moveMult = (s.effect && s.effect.type === "movefast") ? 1.3 : 1.0;
+        // ── bigBallTimer / multiShotTimer countdown (매 프레임) ──
+        if (s.bigBallTimer > 0) s.bigBallTimer--;
+        if (s.multiShotTimer > 0) s.multiShotTimer--;
+
+        // ── player movement (movefast → 이동속도 50% 증가) ──
+        const moveMult = (s.effect && s.effect.type === "movefast") ? 1.5 : 1.0;
         if (s.keys.has("ArrowLeft"))  s.player.x = Math.max(22, s.player.x - 5 * moveMult);
         if (s.keys.has("ArrowRight")) s.player.x = Math.min(GW - 22, s.player.x + 5 * moveMult);
 
         if (s.ball.active) {
           const speedBoost = (s.effect && s.effect.type === "speed") ? 1.3 : 1.0;
-          const totalSpeedMult = Math.min(2.0, ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl));
-          s.ball.y -= 9 * totalSpeedMult * speedBoost;
+          const SPEED_CAP = (s.effect && s.effect.type === "speed") ? 3.8 : 3.5;
+          const totalSpeedMult = Math.min(SPEED_CAP, ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl) * speedBoost);
+          s.ball.y -= 9 * totalSpeedMult;
           // 조준경: 볼이 몬스터 x 방향으로 자동 추적
           if (s.sniperTimer > 0 && s.monster) {
             const dx = s.monster.x - s.ball.x;
@@ -1834,7 +1939,7 @@ export default function WildCatch() {
           } else if (s.ballLvl >= 2) {
             if (!s.ball.trail) s.ball.trail = [];
             s.ball.trail.unshift({ x: s.ball.x, y: s.ball.y });
-            const maxLen = 2 + (s.ballLvl - 2) * 2; // Lv2:2, Lv3:4 ... Lv10:18
+            const maxLen = 2 + (s.ballLvl - 2) * 2; // Lv2:2, Lv3:4 ... Lv20:38
             if (s.ball.trail.length > maxLen) s.ball.trail.pop();
           }
           if (s.ball.y < -20) {
@@ -1846,10 +1951,7 @@ export default function WildCatch() {
               showMsg("⏪ 되감기! 볼이 돌아왔다!", true);
             } else {
             s.ball.active = false;
-            if (s.shield) {
-              s.shield = false;
-              showMsg("🛡️ 방패가 miss를 막았다!", true);
-            } else {
+            {
               s.combo = 0;
               s.missStreak++;
               const limit = s.monster?.boss ? 50 : missLimit(s.charLvl);
@@ -1860,9 +1962,9 @@ export default function WildCatch() {
                 showMsg(`놓쳤다! (${s.missStreak}/${limit})`, false);
                 // 7번 연속 miss → 도움 아이템 자동 등장
                 if (s.missStreak >= 7 && !s.item) {
-                  // 확률: slow(25%)>speed(20%)>heal(18%)>shield(17%)>autoCatch(12%)>movefast(5%)>magnet(2%)>timeplus(1%)
-                  const helpWeights = [0.25,0.20,0.18,0.17,0.12,0.05,0.02,0.01];
-                  const helpTypes   = ["slow","speed","heal","shield","autoCatch","movefast","magnet","timeplus"];
+                  // 확률: slow(22%)>speed(18%)>heal(17%)>shield(15%)>autoCatch(11%)>multishot(8%)>movefast(5%)>magnet(2%)>timeplus(2%)
+                  const helpWeights = [0.22,0.18,0.17,0.15,0.11,0.08,0.05,0.02,0.02];
+                  const helpTypes   = ["slow","speed","heal","shield","autoCatch","multishot","movefast","magnet","timeplus"];
                   let hr = Math.random(), hc = 0, helpType = "shield";
                   for (let i = 0; i < helpWeights.length; i++) { hc += helpWeights[i]; if (hr < hc) { helpType = helpTypes[i]; break; } }
                   s.item = {
@@ -1883,7 +1985,8 @@ export default function WildCatch() {
           if (s.monster) {
             const dx = s.ball.x - s.monster.x;
             const dy = s.ball.y - s.monster.y;
-            if (Math.sqrt(dx * dx + dy * dy) < MON_R + BALL_R + 6) {
+            const hitR = s.bigBallTimer > 0 ? (MON_R + BALL_R * 2 + 6) : (MON_R + BALL_R + 6);
+            if (Math.sqrt(dx * dx + dy * dy) < hitR) {
               s.phase = "catching";
               s.catchTimer = 0;
             }
@@ -1900,25 +2003,25 @@ export default function WildCatch() {
 
               if (type === "speed" || type === "slow" || type === "magnet" || type === "movefast") {
                 s.effect = { type, timer: 300 };
-                const effectMsg = { speed: "⚡ 볼 발사 30% 빠르게! 5초!", slow: "🐌 느리게 5초!", magnet: "🧲 자석! 5초간 몬스터가 다가온다!", movefast: "🏃 무빙패스트! 이동속도 30% UP! 5초!" };
+                const effectMsg = { speed: "⚡ 볼 발사 30% 빠르게! 5초!", slow: "🐌 느리게 5초!", magnet: "🧲 자석! 5초간 몬스터가 다가온다!", movefast: "🏃 무빙패스트! 이동속도 50% UP! 5초!" };
                 showMsg(effectMsg[type], true);
               } else if (type === "shield") {
-                s.shield = true;
-                showMsg("🛡️ 방패! 다음 실패 1번 무효!", true);
+                s.bigBallTimer = 300;
+                showMsg("🔵 볼 확대! 5초간 히트박스 2배!", true);
               } else if (type === "timeplus") {
                 s.monTimer = Math.min(900, s.monTimer + 600);
                 showMsg("⏰ 시간 +10초!", true);
               } else if (type === "autoCatch") {
                 // 뽑기권: 10가지 아이템 중 랜덤 1개 (동일 확률 10%)
-                const lootAll = ["speed","slow","magnet","shield","timeplus","rewind","sniper","fever","freeze","double","movefast","heal"];
+                const lootAll = ["speed","slow","magnet","shield","timeplus","rewind","sniper","fever","freeze","double","movefast","heal","multishot"];
                 const lootType = lootAll[Math.floor(Math.random() * lootAll.length)];
                 const lootPfx = "🎫 뽑기! ";
                 if (lootType === "speed" || lootType === "slow" || lootType === "magnet" || lootType === "movefast") {
                   s.effect = { type: lootType, timer: 300 };
-                  const em = { speed: "⚡ 빠르게 5초!", slow: "🐌 느리게 5초!", magnet: "🧲 자석 5초!", movefast: "🏃 무빙패스트 5초!" };
+                  const em = { speed: "⚡ 빠르게 5초!", slow: "🐌 느리게 5초!", magnet: "🧲 자석 5초!", movefast: "🏃 무빙패스트 50%! 5초!" };
                   showMsg(lootPfx + em[lootType], true);
                 } else if (lootType === "shield") {
-                  s.shield = true; showMsg(lootPfx + "🛡️ 방패!", true);
+                  s.bigBallTimer = 300; showMsg(lootPfx + "🔵 볼 확대 5초!", true);
                 } else if (lootType === "timeplus") {
                   s.monTimer = Math.min(s.monTimer + 600, 900); showMsg(lootPfx + "⏰ 시간 +10초!", true);
                 } else if (lootType === "rewind") {
@@ -1936,6 +2039,8 @@ export default function WildCatch() {
                   s.playerHp = Math.min(s.playerMaxHp, s.playerHp + 2);
                   const healed = s.playerHp - before;
                   showMsg(lootPfx + (healed > 0 ? `💊 HP +${healed}!` : "💊 이미 최대 HP!"), healed > 0);
+                } else if (lootType === "multishot") {
+                  s.multiShotTimer = 300; showMsg(lootPfx + "🔱 멀티샷! 5초간 3발!", true);
                 }
                 spawnParticles(s.ball.x, s.ball.y, true);
               } else if (type === "rewind") {
@@ -1958,9 +2063,37 @@ export default function WildCatch() {
                 s.playerHp = Math.min(s.playerMaxHp, s.playerHp + 2);
                 const healed = s.playerHp - before;
                 showMsg(healed > 0 ? `💊 회복! HP +${healed}! ${"❤️".repeat(s.playerHp)}` : "💊 이미 최대 HP!", healed > 0);
+              } else if (type === "multishot") {
+                s.multiShotTimer = 300;
+                showMsg("🔱 멀티샷! 5초간 볼 3개 동시 발사!", true);
               }
             }
           }
+        }
+
+        // ── sideBalls update (멀티샷 보조 볼) ──
+        if (s.sideBalls.length > 0) {
+          const SPEED_CAP_S = (s.effect && s.effect.type === "speed") ? 3.8 : 3.5;
+          const sbSpeed = Math.min(SPEED_CAP_S, ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl) * ((s.effect && s.effect.type === "speed") ? 1.3 : 1.0));
+          s.sideBalls = s.sideBalls.filter(sb => {
+            sb.y -= 9 * sbSpeed;
+            if (!sb.trail) sb.trail = [];
+            sb.trail.unshift({ x: sb.x, y: sb.y });
+            if (sb.trail.length > 8) sb.trail.pop();
+            if (sb.y < -20) return false;
+            // collision with monster
+            if (s.monster && s.phase === "playing") {
+              const dx = sb.x - s.monster.x;
+              const dy = sb.y - s.monster.y;
+              const hitR = s.bigBallTimer > 0 ? (MON_R + BALL_R * 2 + 6) : (MON_R + BALL_R + 6);
+              if (Math.sqrt(dx * dx + dy * dy) < hitR) {
+                s.phase = "catching";
+                s.catchTimer = 0;
+                return false;
+              }
+            }
+            return true;
+          });
         }
 
         // ── item update ──
@@ -2118,9 +2251,8 @@ export default function WildCatch() {
             if (p.y >= GROUND_Y - 8) {
               // 착탄: 플레이어와 X 거리 체크
               if (Math.abs(s.player.x - p.targetX) < p.impactR && s.playerInvincible <= 0) {
-                if (s.shield) {
-                  s.shield = false;
-                  showMsg("🛡️ 방패가 공격을 막았다!", true);
+                if (false) {
+                  // (방패 효과 제거됨)
                 } else {
                   s.playerHp = Math.max(0, s.playerHp - 1);
                   s.playerInvincible = 120;
@@ -2168,6 +2300,26 @@ export default function WildCatch() {
         if (s.monster) drawMonster(s.monster, t, false);
         if (s.item) drawItem(s.item);
         if (s.ball.active) drawBall(s.ball.x, s.ball.y);
+        // 멀티샷 보조 볼 렌더
+        s.sideBalls.forEach(sb => {
+          // 간단한 trail
+          if (sb.trail) {
+            sb.trail.forEach((pt, i) => {
+              ctx.globalAlpha = (i / sb.trail.length) * 0.4;
+              ctx.fillStyle = BALL_COLORS[s.ballLvl - 1];
+              ctx.beginPath(); ctx.arc(pt.x, pt.y, BALL_R * (0.3 + (i / sb.trail.length) * 0.5), 0, Math.PI * 2); ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+          }
+          // 볼 본체 (축소된 drawBall 스타일)
+          const c = sb.golden ? "#FFD700" : BALL_COLORS[s.ballLvl - 1];
+          ctx.shadowColor = c; ctx.shadowBlur = 10;
+          const grd = ctx.createRadialGradient(sb.x - 2, sb.y - 3, 1, sb.x, sb.y, BALL_R);
+          grd.addColorStop(0, "#fff"); grd.addColorStop(0.35, c); grd.addColorStop(1, c + "77");
+          ctx.fillStyle = grd;
+          ctx.beginPath(); ctx.arc(sb.x, sb.y, BALL_R, 0, Math.PI * 2); ctx.fill();
+          ctx.shadowBlur = 0;
+        });
         drawParticles();
         drawComboPopup();
         drawSpecialBanner();
@@ -2222,6 +2374,12 @@ export default function WildCatch() {
         const golden = s.goldenBall;
         if (golden) s.goldenBall = false;
         s.ball = { x: s.player.x, y: GROUND_Y - PLAYER_H + 8, active: true, golden, rainbowTrail: golden ? [] : null };
+        if (s.multiShotTimer > 0) {
+          s.sideBalls = [
+            { x: s.player.x - 28, y: GROUND_Y - PLAYER_H + 8, golden, trail: [] },
+            { x: s.player.x + 28, y: GROUND_Y - PLAYER_H + 8, golden, trail: [] },
+          ];
+        }
       }
       if (["ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
     }
@@ -2267,6 +2425,12 @@ export default function WildCatch() {
       const golden = s.goldenBall;
       if (golden) s.goldenBall = false;
       s.ball = { x: s.player.x, y: GROUND_Y - PLAYER_H + 8, active: true, golden, rainbowTrail: golden ? [] : null };
+      if (s.multiShotTimer > 0) {
+        s.sideBalls = [
+          { x: s.player.x - 28, y: GROUND_Y - PLAYER_H + 8, golden, trail: [] },
+          { x: s.player.x + 28, y: GROUND_Y - PLAYER_H + 8, golden, trail: [] },
+        ];
+      }
     }
   };
 
@@ -2443,12 +2607,12 @@ export default function WildCatch() {
           }} />
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
-          {Array.from({length: 10}, (_, i) => (
+          {Array.from({length: 20}, (_, i) => (
             <div key={i} style={{
-              width: 10, height: 10, borderRadius: "50%",
+              width: 8, height: 8, borderRadius: "50%",
               background: i < ui.ballLvl ? BALL_COLORS[i] : "#1A2744",
               border: `1px solid ${i < ui.ballLvl ? BALL_COLORS[i] : "#2A3A54"}`,
-              boxShadow: i < ui.ballLvl ? `0 0 6px ${BALL_COLORS[i]}` : "none",
+              boxShadow: i < ui.ballLvl ? `0 0 5px ${BALL_COLORS[i]}` : "none",
             }} />
           ))}
         </div>
@@ -2507,7 +2671,8 @@ export default function WildCatch() {
             s.combo = 0; s.maxCombo = 0; s.specialCaught = 0;
             s.specialBanner = 0; s.missStreak = 0; s.gameOver = false;
             s.goldenBall = false; s.monTimer = 900; s.dangerTimer = 0;
-            s.shield = false; s.flashTimer = 0; s.comboPopTimer = 0; s.comboPopValue = 0;
+            s.shield = false; s.bigBallTimer = 0; s.multiShotTimer = 0; s.sideBalls = [];
+            s.flashTimer = 0; s.comboPopTimer = 0; s.comboPopValue = 0;
             s.goldenTime = false; s.goldenTimeTimer = 0;
             s.charXp = 0; s.bossCatchBanner = 0;
             s.difficulty = null; s.paused = true; s.totalScore = 0;
@@ -2681,7 +2846,6 @@ function RulesModal({ onClose }) {
         "바닥 빨간 원 = 착탄 지점 — 원 밖으로 이동해 피하세요!",
         "피격 시 HP -1, 2초간 무적",
         "이지: 6초마다 공격, 경고 1.2초 / 하드: 3.5초마다 공격, 경고 0.6초",
-        "🛡️ 방패 아이템으로 돌진 1회 막기 가능",
         "10마리 포획마다 💖 HP 1 자동 회복 (최대 5)",
         "HP 0 = 게임 오버!",
       ],
@@ -2716,17 +2880,20 @@ function RulesModal({ onClose }) {
       ],
     },
     {
-      title: "🎯 볼 레벨 이펙트 (8종)",
+      title: "🎯 볼 레벨 이펙트 (20단계)",
       items: [
         "볼 레벨업마다 이펙트 강화 + 발사 속도 증가!",
-        "Lv1: 100% → Lv8: 200% (선형 증가, 최대 200%)",
+        "Lv1: 100% → Lv10: 181% → Lv20: 350% (일반 Max)",
+        "⚡빠르게 아이템 사용 시 예외적으로 최대 380% 가능!",
         "Lv2: 흰색 페이드 trail · 소프트 글로우",
-        "Lv3: 컬러 페이드 trail",
-        "Lv4: 선명한 컬러 trail",
-        "Lv5: 밝은 trail + 스파크 3개",
-        "Lv6: 펄싱 글로우 trail + 스파크 4개",
-        "Lv7: 더블 레이어 trail + 스파크 5개",
-        "Lv8+: 무지개 trail + 레인보우 스파크 6개",
+        "Lv3~4: 컬러 페이드/선명 trail",
+        "Lv5~7: trail + 스파크 3~5개",
+        "Lv8~10: 무지개 rainbow trail + 레인보우 스파크",
+        "Lv11: 비비드 레드 shimmer / Lv12: 딥 크림슨 마젠타",
+        "Lv13: 노바 스타버스트 / Lv14: 네온 그린 플라즈마",
+        "Lv15: 아이스 크리스탈 / Lv16: 플라즈마 전기 + 회전링",
+        "Lv17: 민트 씨포 / Lv18: 딥 스페이스 퍼플 + 회전링",
+        "Lv19: 혜성 골든 불꽃 / Lv20: 신의 공 (풀 레인보우 다층)",
         "포획 중 orbit도 볼 레벨에 따라 변화",
       ],
     },
@@ -2751,22 +2918,23 @@ function RulesModal({ onClose }) {
       ],
     },
     {
-      title: "🎁 아이템 (13종)",
+      title: "🎁 아이템 (14종)",
       items: [
-        "포획 성공 후 35% 확률로 13종 아이템 등장 (균등 확률)",
-        "⚡빠르게: 5초간 볼 발사 속도 30% 증가",
+        "포획 성공 후 35% 확률로 14종 아이템 등장 (균등 확률)",
+        "⚡빠르게: 5초간 볼 발사 속도 +30% (최대 380% 예외 허용!)",
         "🐌느리게: 5초간 몬스터 속도 35%로 감소",
         "🧲자석: 5초간 몬스터가 플레이어 쪽으로 이동",
-        "🛡️방패: 다음 볼 miss 1회 무효",
+        "🔵볼확대: 5초간 볼 히트박스 2배 (맞추기 쉬워짐!)",
         "⏰시간+: 몬스터 제한 시간 +10초",
-        "🎫뽑기권: 나머지 12종 중 랜덤 1개 발동!",
+        "🎫뽑기권: 나머지 13종 중 랜덤 1개 발동!",
         "⏪되감기: 볼이 화면 밖으로 나가도 되돌아옴 (miss 무효)",
         "🎯조준경: 5초간 볼이 몬스터 방향 자동 추적",
         "🔥콤보불꽃: 10초간 포획마다 콤보 +2씩 적립",
         "🧊냉동: 3초간 몬스터 완전 정지",
         "💫더블: 다음 포획 1회 XP·점수 ×3",
-        "🏃무빙패스트: 5초간 캐릭터 이동속도 30% 증가",
+        "🏃무빙패스트: 5초간 캐릭터 이동속도 50% 증가",
         "💊회복: HP 2 즉시 회복 (최대 초과 불가)",
+        "🔱멀티샷: 5초간 볼 3개 동시 발사! (좌·중앙·우)",
         "5초 안에 볼로 맞추지 않으면 도망!",
       ],
     },
