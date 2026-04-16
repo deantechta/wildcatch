@@ -1947,8 +1947,8 @@ export default function WildCatch() {
 
         if (s.ball.active) {
           const speedBoost = (s.effect && s.effect.type === "speed") ? 1.3 : 1.0;
-          const SPEED_CAP = (s.effect && s.effect.type === "speed") ? 3.8 : 3.5;
-          const totalSpeedMult = Math.min(SPEED_CAP, ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl) * speedBoost);
+          const baseMult = Math.min(3.5, ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl));
+          const totalSpeedMult = baseMult * speedBoost;
           s.ball.y -= 9 * totalSpeedMult;
           // 조준경: 볼이 몬스터 x 방향으로 자동 추적
           if (s.sniperTimer > 0 && s.monster) {
@@ -2097,8 +2097,8 @@ export default function WildCatch() {
 
         // ── sideBalls update (멀티샷 보조 볼) ──
         if (s.sideBalls.length > 0) {
-          const SPEED_CAP_S = (s.effect && s.effect.type === "speed") ? 3.8 : 3.5;
-          const sbSpeed = Math.min(SPEED_CAP_S, ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl) * ((s.effect && s.effect.type === "speed") ? 1.3 : 1.0));
+          const sbBaseMult = Math.min(3.5, ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl));
+          const sbSpeed = sbBaseMult * ((s.effect && s.effect.type === "speed") ? 1.3 : 1.0);
           s.sideBalls = s.sideBalls.filter(sb => {
             sb.y -= 9 * sbSpeed;
             if (!sb.trail) sb.trail = [];
