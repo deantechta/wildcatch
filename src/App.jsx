@@ -118,6 +118,61 @@ const MONSTERS = [
   { level: 10, emoji: "🦋", name: "환생나비", rarity: "legend" },
   { level: 10, emoji: "✨", name: "빛의신",   rarity: "legend" },
   { level: 10, emoji: "🪄", name: "마법사",   rarity: "legend" },
+  // ── mythic Lv 11 (10종) ──
+  { level: 11, emoji: "🌠", name: "별똥신",   rarity: "mythic" },
+  { level: 11, emoji: "⚫", name: "블랙홀",   rarity: "mythic" },
+  { level: 11, emoji: "🛸", name: "우주선",   rarity: "mythic" },
+  { level: 11, emoji: "🌌", name: "코스모스", rarity: "mythic" },
+  { level: 11, emoji: "💫", name: "퀘이사",   rarity: "mythic" },
+  { level: 11, emoji: "🌀", name: "차원균열", rarity: "mythic" },
+  { level: 11, emoji: "👁",  name: "전지안",   rarity: "mythic" },
+  { level: 11, emoji: "🔱", name: "삼지창신", rarity: "mythic" },
+  { level: 11, emoji: "🌊", name: "원초대양", rarity: "mythic" },
+  { level: 11, emoji: "🔥", name: "불멸왕",   rarity: "mythic" },
+  // ── mythic Lv 12 (10종) ──
+  { level: 12, emoji: "🐲", name: "신룡",     rarity: "mythic" },
+  { level: 12, emoji: "💀", name: "사신",     rarity: "mythic" },
+  { level: 12, emoji: "🌑", name: "암흑왕",   rarity: "mythic" },
+  { level: 12, emoji: "⚡", name: "번개신왕", rarity: "mythic" },
+  { level: 12, emoji: "❄️",  name: "빙하신",   rarity: "mythic" },
+  { level: 12, emoji: "🌋", name: "화산대왕", rarity: "mythic" },
+  { level: 12, emoji: "☄️",  name: "혜성대왕", rarity: "mythic" },
+  { level: 12, emoji: "👻", name: "유령왕",   rarity: "mythic" },
+  { level: 12, emoji: "🦅", name: "피닉스",   rarity: "mythic" },
+  { level: 12, emoji: "🌪", name: "회오리왕", rarity: "mythic" },
+  // ── mythic Lv 13 (10종) ──
+  { level: 13, emoji: "🌍", name: "지구신",   rarity: "mythic" },
+  { level: 13, emoji: "🌟", name: "초신성",   rarity: "mythic" },
+  { level: 13, emoji: "🐉", name: "원초룡",   rarity: "mythic" },
+  { level: 13, emoji: "☀️",  name: "태양왕",   rarity: "mythic" },
+  { level: 13, emoji: "🌙", name: "달의왕",   rarity: "mythic" },
+  { level: 13, emoji: "🌈", name: "창조신",   rarity: "mythic" },
+  { level: 13, emoji: "🪐", name: "행성왕",   rarity: "mythic" },
+  { level: 13, emoji: "🌊", name: "심해의신", rarity: "mythic" },
+  { level: 13, emoji: "💎", name: "절대보석", rarity: "mythic" },
+  { level: 13, emoji: "🔮", name: "전능자",   rarity: "mythic" },
+  // ── mythic Lv 14 (10종) ──
+  { level: 14, emoji: "🌌", name: "은하의신", rarity: "mythic" },
+  { level: 14, emoji: "⚡", name: "제우스",   rarity: "mythic" },
+  { level: 14, emoji: "🐲", name: "신성룡",   rarity: "mythic" },
+  { level: 14, emoji: "👑", name: "신왕",     rarity: "mythic" },
+  { level: 14, emoji: "✨", name: "순수빛",   rarity: "mythic" },
+  { level: 14, emoji: "🌊", name: "포세이돈", rarity: "mythic" },
+  { level: 14, emoji: "🔥", name: "프로메테", rarity: "mythic" },
+  { level: 14, emoji: "🌀", name: "차원신",   rarity: "mythic" },
+  { level: 14, emoji: "💀", name: "하데스",   rarity: "mythic" },
+  { level: 14, emoji: "🌟", name: "빛의근원", rarity: "mythic" },
+  // ── mythic Lv 15 (10종) ──
+  { level: 15, emoji: "🌌", name: "우주신",   rarity: "mythic" },
+  { level: 15, emoji: "♾️",  name: "무한신",   rarity: "mythic" },
+  { level: 15, emoji: "🔮", name: "절대자",   rarity: "mythic" },
+  { level: 15, emoji: "💫", name: "초월자",   rarity: "mythic" },
+  { level: 15, emoji: "🌟", name: "만물의신", rarity: "mythic" },
+  { level: 15, emoji: "⚡", name: "절대번개", rarity: "mythic" },
+  { level: 15, emoji: "🐲", name: "원초신룡", rarity: "mythic" },
+  { level: 15, emoji: "👁",  name: "모든것의눈", rarity: "mythic" },
+  { level: 15, emoji: "🌊", name: "원초의물", rarity: "mythic" },
+  { level: 15, emoji: "☀️",  name: "원초의빛", rarity: "mythic" },
 ];
 
 // ── Boss Monster Definitions (이름만 — 픽셀아트는 drawBossSprite에서 개별 구현) ──
@@ -135,7 +190,7 @@ const BOSS_MONSTERS = [
 
 const RARITY_COLOR = {
   common: "#78909C", uncommon: "#43A047",
-  rare: "#1E88E5", epic: "#8E24AA", legend: "#FFD700",
+  rare: "#1E88E5", epic: "#8E24AA", legend: "#FFD700", mythic: "#FF4DC4",
 };
 
 const BALL_COLORS = [
@@ -217,9 +272,10 @@ function missLimit(charLvl) {
 // (구 charLevelFromCatches 제거 — CHAR_XP_REQ 기반 charLvlFromXp로 대체)
 
 function spawnMonster(ballLvl, charLvl = 1, special = false, difficulty = "hard") {
-  const min = Math.max(1, ballLvl - 1);
-  const max = Math.min(10, ballLvl + 2);
-  const lvl = special ? 10 : Math.floor(Math.random() * (max - min + 1)) + min;
+  const maxMonLvl = difficulty === "hard" ? 15 : 10;
+  const min = Math.max(1, Math.min(maxMonLvl, ballLvl - 1));
+  const max = Math.min(maxMonLvl, ballLvl + 2);
+  const lvl = special ? maxMonLvl : Math.floor(Math.random() * (max - min + 1)) + min;
   const baseSpeed = 0.9 + lvl * 0.22;
   const tier = Math.floor((charLvl - 1) / 5);
   const speedMult = Math.min(2.0, 1.0 + tier * 0.12);
@@ -350,7 +406,7 @@ export default function WildCatch() {
       ballName: BALL_NAMES[s.ballLvl - 1],
       combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught,
       goldenBall: s.goldenBall, score: s.totalScore,
-      ballSpeed: Math.min(350, Math.round(Math.min(3.5, ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl)) * 100)),
+      ballSpeed: Math.round(Math.min(3.5, ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl)) * ((s.effect && s.effect.type === "speed") ? 1.3 : 1.0) * 100),
       catchPct: pct,
       charLvl: s.charLvl,
     });
@@ -374,7 +430,7 @@ export default function WildCatch() {
       const req = XP_REQ[s.ballLvl - 1] === Infinity ? 999 : XP_REQ[s.ballLvl - 1];
       const mon = s.monster;
       const pct = mon ? Math.round(catchRate(s.ballLvl, mon.level) * 100) : 0;
-      setUi(prev => ({ ...prev, message: "", xp: s.xp, xpReq: req, totalCaught: s.totalCaught, catchPct: pct, charLvl: s.charLvl, combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught, goldenBall: s.goldenBall, score: s.totalScore, ballSpeed: Math.min(350, Math.round(Math.min(3.5, ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl)) * 100)) }));
+      setUi(prev => ({ ...prev, message: "", xp: s.xp, xpReq: req, totalCaught: s.totalCaught, catchPct: pct, charLvl: s.charLvl, combo: s.combo, maxCombo: s.maxCombo, specialCaught: s.specialCaught, goldenBall: s.goldenBall, score: s.totalScore, ballSpeed: Math.round(Math.min(3.5, ballSpeedMult(s.charLvl) * ballLvlSpeedMult(s.ballLvl)) * ((s.effect && s.effect.type === "speed") ? 1.3 : 1.0) * 100) }));
     }, 2200);
   }
 
@@ -1753,7 +1809,7 @@ export default function WildCatch() {
               const specialBonus = CHAR_XP_REQ[Math.min(s.charLvl - 1, CHAR_XP_REQ.length - 1)] * 5;
               s.charXp += specialBonus;
               s.totalScore += specialBonus * scoreMult;
-              s.charLvl = Math.min(50, charLvlFromXp(s.charXp));
+              if (charLvlFromXp(s.charXp) > s.charLvl) s.charLvl = Math.min(50, s.charLvl + 1);
               spawnLevelUpEffect(s.player.x, GROUND_Y - PLAYER_H);
             }
 
@@ -1762,7 +1818,7 @@ export default function WildCatch() {
             s.totalScore += s.monster.level * scoreMult;
             const newCharLvl = charLvlFromXp(s.charXp);
             if (newCharLvl > s.charLvl) {
-              s.charLvl = newCharLvl;
+              s.charLvl = Math.min(50, s.charLvl + 1);
               spawnLevelUpEffect(s.player.x, GROUND_Y - PLAYER_H);
               const req = XP_REQ[s.ballLvl - 1];
               if (s.ballLvl < 20 && req !== Infinity && s.xp >= req) {
