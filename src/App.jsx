@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { usePostHog } from "@posthog/react";
 
 // ── Game Constants ─────────────────────────────────────────
 const GW = 540, GH = 390;
@@ -311,6 +312,10 @@ function spawnMonster(ballLvl, charLvl = 1, special = false, difficulty = "hard"
 
 // ── Main Component ─────────────────────────────────────────
 export default function WildCatch() {
+  const posthog = usePostHog();
+  const posthogRef = useRef(null);
+  useEffect(() => { posthogRef.current = posthog; }, [posthog]);
+
   const canvasRef = useRef(null);
   const gs = useRef({
     player: { x: GW / 2 },
@@ -1773,6 +1778,25 @@ export default function WildCatch() {
             const wasSpecial = s.monster.special;
             s.collection.push({ ...s.monster });
             s.totalCaught++;
+            posthogRef.current?.capture('monster_caught', {
+              monster_name: s.monster.name,
+              monster_level: s.monster.level,
+              monster_rarity: s.monster.rarity,
+              is_boss: !!wasBoss,
+              is_special: !!wasSpecial,
+              combo: s.combo,
+              total_caught: s.totalCaught,
+              ball_level: s.ballLvl,
+              char_level: s.charLvl,
+              difficulty: s.difficulty,
+            });
+            if (wasBoss) posthogRef.current?.capture('boss_caught', {
+              boss_name: s.monster.name,
+              is_power: !!wasPower,
+              total_caught: s.totalCaught,
+              char_level: s.charLvl,
+              difficulty: s.difficulty,
+            });
             // 10마리마다 HP 1 회복 (최대 5)
             if (s.totalCaught % 10 === 0 && s.playerHp < s.playerMaxHp) {
               s.playerHp = Math.min(s.playerMaxHp, s.playerHp + 1);
@@ -1792,6 +1816,7 @@ export default function WildCatch() {
             if (s.combo % 5 === 0) {
               s.goldenBall = true;
               showMsg(`🏆 ${s.combo}콤보! 황금볼 획득!`, true);
+              posthogRef.current?.capture('combo_milestone', { combo: s.combo, difficulty: s.difficulty });
             }
 
             const scoreMult = (s.difficulty === "easy" ? 1.5 : 1) * (s.doubleNext ? 3 : 1);
@@ -1820,10 +1845,12 @@ export default function WildCatch() {
             if (newCharLvl > s.charLvl) {
               s.charLvl = Math.min(50, s.charLvl + 1);
               spawnLevelUpEffect(s.player.x, GROUND_Y - PLAYER_H);
+              posthogRef.current?.capture('character_leveled_up', { char_level: s.charLvl, total_caught: s.totalCaught, difficulty: s.difficulty });
               const req = XP_REQ[s.ballLvl - 1];
               if (s.ballLvl < 20 && req !== Infinity && s.xp >= req) {
                 s.xp -= req;
                 s.ballLvl = Math.min(20, s.ballLvl + 1);
+                posthogRef.current?.capture('ball_leveled_up', { ball_level: s.ballLvl, ball_name: BALL_NAMES[s.ballLvl - 1], char_level: s.charLvl });
               }
               if (!wasSpecial) showMsg(`🎊 캐릭터 Lv.${s.charLvl} 달성!`, true);
             } else if (!wasSpecial) {
@@ -1831,6 +1858,7 @@ export default function WildCatch() {
               if (s.ballLvl < 20 && req !== Infinity && s.xp >= req) {
                 s.xp -= req;
                 s.ballLvl = Math.min(20, s.ballLvl + 1);
+                posthogRef.current?.capture('ball_leveled_up', { ball_level: s.ballLvl, ball_name: BALL_NAMES[s.ballLvl - 1], char_level: s.charLvl });
                 showMsg(`✨ 볼 Lv.${s.ballLvl}! ${BALL_NAMES[s.ballLvl-1]}!`, true);
               } else {
                 const comboMsgs = ["", "", "👍 2콤보!", "🔥 3콤보!", "💥 4콤보!", "⭐ 5콤보! 굉장해!", "🌟 6콤보!", "🚀 7콤보! 천재!", "👑 8콤보!", "💎 9콤보!", "🏆 10콤보!! 전설!"];
@@ -1926,6 +1954,7 @@ export default function WildCatch() {
             s.goldenTime = true;
             s.goldenTimeTimer = 1800; // 30초
             showMsg("🌈 골든 타임! 30초 동안 XP 2배!", true);
+            posthogRef.current?.capture('golden_time_activated', { total_caught: s.totalCaught, char_level: s.charLvl, difficulty: s.difficulty });
           }
 
           // Math quiz every 5 catches
@@ -2037,6 +2066,7 @@ export default function WildCatch() {
               const limit = s.monster?.boss ? 50 : missLimit(s.charLvl);
               if (s.missStreak >= limit) {
                 s.gameOver = true;
+                posthogRef.current?.capture('game_over', { reason: 'miss_limit', total_caught: s.totalCaught, max_combo: s.maxCombo, score: s.totalScore, char_level: s.charLvl, ball_level: s.ballLvl, difficulty: s.difficulty });
                 setGameOver(true);
               } else {
                 showMsg(`놓쳤다! (${s.missStreak}/${limit})`, false);
@@ -2080,6 +2110,7 @@ export default function WildCatch() {
               s.item = null;
               s.ball.active = false;
               spawnParticles(s.ball.x, s.ball.y, true);
+              posthogRef.current?.capture('item_collected', { item_type: type, total_caught: s.totalCaught, char_level: s.charLvl, difficulty: s.difficulty });
 
               if (type === "speed" || type === "slow" || type === "magnet" || type === "movefast") {
                 s.effect = { type, timer: 300 };
@@ -2335,7 +2366,9 @@ export default function WildCatch() {
                   s.shake = 25;
                   spawnParticles(s.player.x, GROUND_Y - PLAYER_H / 2, false);
                   if (s.playerHp <= 0) {
-                    s.gameOver = true; setGameOver(true);
+                    s.gameOver = true;
+                    posthogRef.current?.capture('game_over', { reason: 'boss_attack', total_caught: s.totalCaught, max_combo: s.maxCombo, score: s.totalScore, char_level: s.charLvl, ball_level: s.ballLvl, difficulty: s.difficulty });
+                    setGameOver(true);
                   } else {
                     showMsg(`💥 공격 맞았다! HP: ${"❤️".repeat(s.playerHp)}`, false);
                   }
@@ -2358,6 +2391,7 @@ export default function WildCatch() {
             if (s.monster.boss) {
               // 보스 타임아웃 → 게임오버
               s.gameOver = true;
+              posthogRef.current?.capture('game_over', { reason: 'boss_timeout', total_caught: s.totalCaught, max_combo: s.maxCombo, score: s.totalScore, char_level: s.charLvl, ball_level: s.ballLvl, difficulty: s.difficulty });
               setGameOver(true);
             } else {
               // 시간 초과 → 도망 처리 + 위기 카운트다운 시작
@@ -2522,7 +2556,9 @@ export default function WildCatch() {
   };
 
   function handleQuizAnswer(num) {
-    if (num === quiz.answer) {
+    const correct = num === quiz.answer;
+    posthog?.capture('quiz_answered', { correct, difficulty: gs.current.difficulty });
+    if (correct) {
       setQuiz(null);
       gs.current.phase = "playing";
       showMsg("⭕ 정답! 계속 가자!", true);
@@ -2770,6 +2806,7 @@ export default function WildCatch() {
             s.monster = spawnMonster(1, s.charLvl, false, diff);
             setDifficulty(diff);
             syncUi("게임 시작!", true);
+            posthogRef.current?.capture('game_started', { difficulty: diff });
           }} />
         )}
       </div>
