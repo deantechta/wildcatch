@@ -176,17 +176,42 @@ const MONSTERS = [
   { level: 15, emoji: "☀️",  name: "원초의빛", rarity: "mythic" },
 ];
 
-// ── Boss Monster Definitions (이름만 — 픽셀아트는 drawBossSprite에서 개별 구현) ──
+// ── Boss Monster Definitions ──
+// element: "fire"|"water"|"electric"|"ghost"|"nature"
+// agility: 이동속도 배수 (0.7~1.4)
+// attackRate: 공격 쿨타임 배수 (낮을수록 빠름, 0.65~1.4)
+// dodgeChance: 최종 포획 회피 확률 (hp=1일 때만 적용, 0~0.15)
 const BOSS_MONSTERS = [
-  { name: "피카추" },              { name: "라이추" },   { name: "리자드" },              { name: "파이리" },
-  { name: "꼬부기" },              { name: "거북왕", power: true },   { name: "팬텀" },     { name: "이상해씨" },
-  { name: "리자몽", power: true }, { name: "잠만보" },
-  { name: "이브이" },              { name: "뮤츠", power: true },     { name: "뮤", power: true },       { name: "푸린" },
-  { name: "망나뇽", power: true }, { name: "이상해꽃", power: true }, { name: "후딘", power: true },     { name: "붐볼" },
-  { name: "식스테일" },            { name: "가디" },
-  { name: "이상해풀" },            { name: "어니부기" }, { name: "버터플" },              { name: "아보크" },
-  { name: "나인테일", power: true }, { name: "윈디" },   { name: "수륙챙이" },            { name: "우츠보트" },
-  { name: "독파리" },              { name: "질뻐기" },
+  { name: "피카추",   element: "electric", agility: 1.3, attackRate: 0.80, dodgeChance: 0.10 },
+  { name: "라이추",   element: "electric", agility: 1.2, attackRate: 0.75, dodgeChance: 0.05 },
+  { name: "리자드",   element: "fire",     agility: 1.1, attackRate: 0.90, dodgeChance: 0.05 },
+  { name: "파이리",   element: "fire",     agility: 0.9, attackRate: 0.65, dodgeChance: 0.00 },
+  { name: "꼬부기",   element: "water",    agility: 0.8, attackRate: 1.10, dodgeChance: 0.15 },
+  { name: "거북왕",   power: true,  element: "water",    agility: 0.7, attackRate: 0.75, dodgeChance: 0.15 },
+  { name: "팬텀",     element: "ghost",    agility: 1.4, attackRate: 1.30, dodgeChance: 0.15 },
+  { name: "이상해씨", element: "nature",   agility: 1.0, attackRate: 1.00, dodgeChance: 0.05 },
+  { name: "리자몽",   power: true,  element: "fire",     agility: 1.2, attackRate: 0.70, dodgeChance: 0.10 },
+  { name: "잠만보",   element: "nature",   agility: 0.6, attackRate: 1.40, dodgeChance: 0.00 },
+  { name: "이브이",   element: "nature",   agility: 1.2, attackRate: 1.10, dodgeChance: 0.10 },
+  { name: "뮤츠",     power: true,  element: "ghost",    agility: 1.3, attackRate: 0.70, dodgeChance: 0.15 },
+  { name: "뮤",       power: true,  element: "ghost",    agility: 1.4, attackRate: 0.80, dodgeChance: 0.15 },
+  { name: "푸린",     element: "nature",   agility: 1.0, attackRate: 1.20, dodgeChance: 0.05 },
+  { name: "망나뇽",   power: true,  element: "electric", agility: 1.3, attackRate: 0.65, dodgeChance: 0.10 },
+  { name: "이상해꽃", power: true,  element: "nature",   agility: 0.9, attackRate: 0.80, dodgeChance: 0.10 },
+  { name: "후딘",     power: true,  element: "ghost",    agility: 1.4, attackRate: 0.75, dodgeChance: 0.15 },
+  { name: "붐볼",     element: "fire",     agility: 0.9, attackRate: 0.70, dodgeChance: 0.00 },
+  { name: "식스테일", element: "fire",     agility: 1.1, attackRate: 0.90, dodgeChance: 0.05 },
+  { name: "가디",     element: "nature",   agility: 1.0, attackRate: 1.00, dodgeChance: 0.05 },
+  { name: "이상해풀", element: "nature",   agility: 1.0, attackRate: 1.00, dodgeChance: 0.05 },
+  { name: "어니부기", element: "water",    agility: 0.8, attackRate: 1.00, dodgeChance: 0.10 },
+  { name: "버터플",   element: "nature",   agility: 1.2, attackRate: 1.10, dodgeChance: 0.10 },
+  { name: "아보크",   element: "nature",   agility: 1.1, attackRate: 0.90, dodgeChance: 0.05 },
+  { name: "나인테일", power: true,  element: "fire",     agility: 1.2, attackRate: 0.80, dodgeChance: 0.10 },
+  { name: "윈디",     element: "electric", agility: 1.3, attackRate: 0.85, dodgeChance: 0.05 },
+  { name: "수륙챙이", element: "water",    agility: 0.9, attackRate: 1.00, dodgeChance: 0.10 },
+  { name: "우츠보트", element: "nature",   agility: 0.8, attackRate: 1.10, dodgeChance: 0.05 },
+  { name: "독파리",   element: "nature",   agility: 1.2, attackRate: 1.00, dodgeChance: 0.10 },
+  { name: "질뻐기",   element: "water",    agility: 0.7, attackRate: 1.20, dodgeChance: 0.10 },
 ];
 
 const RARITY_COLOR = {
@@ -374,6 +399,8 @@ export default function WildCatch() {
     bossLastHitX: -999,   // 직전 피격 시 보스 X 위치
     bossInvincible: 0,    // 순간이동 후 무적 프레임 (60 = 1초)
     bossHitCombo: 0,      // 보스 연속 피격 콤보 카운터
+    bossInitialSpd: 0,    // 보스 초기 속도 (점진 감속 기준값)
+    bossHitCount: 0,      // 보스 피격 횟수 (점진 감속 계산용)
   });
 
   const [ui, setUi] = useState({
@@ -1231,20 +1258,31 @@ export default function WildCatch() {
 
     // ── boss projectiles & pre-attack warning ──
     function drawBossProjectiles() {
-      // 발사 전 경고: 바닥에 깜박이는 빨간 타원 (targets 배열 순회)
+      // 속성별 색상 테마
+      const ELEM_CFG = {
+        fire:     { warn: "#FF1744", warnGlow: "#FF1744", warnStroke: "rgba(255,80,80,",     proj: "#FF3D00", projGlow: "#FF6D00", trail: "rgba(255,120,50,0.55)" },
+        water:    { warn: "#0288D1", warnGlow: "#29B6F6", warnStroke: "rgba(80,180,255,",    proj: "#0277BD", projGlow: "#4FC3F7", trail: "rgba(100,200,255,0.55)" },
+        electric: { warn: "#FFD600", warnGlow: "#FFD600", warnStroke: "rgba(255,230,50,",    proj: "#F9A825", projGlow: "#FFD54F", trail: "rgba(255,240,80,0.55)"  },
+        ghost:    { warn: "#9C27B0", warnGlow: "#CE93D8", warnStroke: "rgba(180,100,220,",   proj: "#7B1FA2", projGlow: "#BA68C8", trail: "rgba(180,100,220,0.55)" },
+        nature:   { warn: "#388E3C", warnGlow: "#81C784", warnStroke: "rgba(100,200,100,",   proj: "#2E7D32", projGlow: "#66BB6A", trail: "rgba(100,200,100,0.55)" },
+      };
+      const elem = s.monster?.bossElement || "fire";
+      const ec = ELEM_CFG[elem] || ELEM_CFG.fire;
+
+      // 발사 전 경고: 바닥에 깜박이는 속성색 타원 (targets 배열 순회)
       if (s.bossPreAttack) {
         const { targets, impactR } = s.bossPreAttack;
         const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.04);
         targets.forEach(targetX => {
           ctx.globalAlpha = 0.35 + 0.45 * pulse;
-          ctx.fillStyle = "#FF1744";
-          ctx.shadowColor = "#FF1744"; ctx.shadowBlur = 18;
+          ctx.fillStyle = ec.warn;
+          ctx.shadowColor = ec.warnGlow; ctx.shadowBlur = 18;
           ctx.beginPath();
           ctx.ellipse(targetX, GROUND_Y - 4, impactR, impactR * 0.28, 0, 0, Math.PI * 2);
           ctx.fill();
           ctx.shadowBlur = 0; ctx.globalAlpha = 1;
           // 테두리 링
-          ctx.strokeStyle = `rgba(255,80,80,${0.7 + 0.3 * pulse})`;
+          ctx.strokeStyle = `${ec.warnStroke}${0.7 + 0.3 * pulse})`;
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.ellipse(targetX, GROUND_Y - 4, impactR, impactR * 0.28, 0, 0, Math.PI * 2);
@@ -1257,17 +1295,17 @@ export default function WildCatch() {
         // 바닥 경고 그림자 (투사체 비행 중에도 유지)
         const progress = Math.max(0, (p.y - (s.monster?.y ?? 0)) / (GROUND_Y - (s.monster?.y ?? 0)));
         ctx.globalAlpha = 0.2 + 0.4 * progress;
-        ctx.fillStyle = "#FF1744";
+        ctx.fillStyle = ec.warn;
         ctx.beginPath();
         ctx.ellipse(p.targetX, GROUND_Y - 4, p.impactR, p.impactR * 0.28, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1;
         // 투사체 볼
-        ctx.fillStyle = "#FF3D00";
-        ctx.shadowColor = "#FF6D00"; ctx.shadowBlur = 16;
+        ctx.fillStyle = ec.proj;
+        ctx.shadowColor = ec.projGlow; ctx.shadowBlur = 16;
         ctx.beginPath(); ctx.arc(p.x, p.y, 10, 0, Math.PI * 2); ctx.fill();
         // 꼬리 흔적
-        ctx.strokeStyle = "rgba(255,120,50,0.55)";
+        ctx.strokeStyle = ec.trail;
         ctx.lineWidth = 4;
         ctx.beginPath();
         ctx.moveTo(p.x - p.vx * 4, p.y - p.vy * 4);
@@ -1683,7 +1721,10 @@ export default function WildCatch() {
 
         if (s.catchTimer >= 1500) {
           const sleepBonus = (s.monster.pattern === "sleepy" && s.monster.sleeping) ? 2.0 : 1.0;
-          const rate = s.monster.special ? 0.30 : Math.min(0.98, catchRate(s.ballLvl, s.monster.level) * sleepBonus);
+          const baseRate = s.monster.special ? 0.30 : Math.min(0.98, catchRate(s.ballLvl, s.monster.level) * sleepBonus);
+          // 보스 HP 데미지 투구: 최소 50% 보장 (볼 레벨 격차와 무관하게 플레이 가능하도록)
+          // 최종 포획 (hp=1): 기존 catchRate 그대로 (더 어렵게 유지)
+          const rate = (s.monster.boss && s.monster.hp > 1) ? Math.max(0.50, baseRate) : baseRate;
           const ok = s.ball.golden || Math.random() < rate;
           s.ball.active = false;
 
@@ -1720,7 +1761,14 @@ export default function WildCatch() {
               }
             }
 
+            // ── 점진적 속도 감소: 피격마다 -12%, 레벨별 하한선 ──
+            s.bossHitCount++;
+            const speedFloor = Math.max(0.45, 0.45 + Math.floor(s.charLvl / 10) * 0.075);
+            const speedFactor = Math.max(speedFloor, 1 - s.bossHitCount * 0.12);
+
             if (sameSpot) {
+              // 텔레포트: 속도 카운터 리셋 (보스가 리셋되므로 긴장감 유지)
+              s.bossHitCount = 0;
               const half = GW / 2;
               const newX = s.monster.x < half
                 ? half + 40 + Math.random() * (half - 80)
@@ -1728,16 +1776,21 @@ export default function WildCatch() {
               const newY = 40 + Math.random() * (GROUND_Y * 0.45);
               s.monster.x = newX;
               s.monster.y = newY;
+              // 텔레포트 후 초기 속도로 재출발
+              const ang0 = Math.random() * Math.PI * 2;
+              s.monster.vx = Math.cos(ang0) * s.bossInitialSpd;
+              s.monster.vy = Math.sin(ang0) * s.bossInitialSpd * 0.5;
               s.bossInvincible = 60;
               s.monster.stunTimer = 20;
               const cancelTag = attackCancelled ? " ⚡캔슬!" : s.bossPreAttack ? " 공격 주의!" : "";
               showMsg(`💥 보스 HP: ${"❤️".repeat(s.monster.hp)} — 순간이동!${cancelTag}${healMsg}`, true);
             } else {
               s.monster.stunTimer = 30;
-              const spd = 1.8 + Math.random() * 1.8;
+              // 피격 횟수에 따라 속도가 점진적으로 감소
+              const targetSpd = s.bossInitialSpd * speedFactor;
               const ang = Math.random() * Math.PI * 2;
-              s.monster.vx = Math.cos(ang) * spd;
-              s.monster.vy = Math.sin(ang) * spd * 0.5;
+              s.monster.vx = Math.cos(ang) * targetSpd;
+              s.monster.vy = Math.sin(ang) * targetSpd * 0.5;
               const cancelTag = attackCancelled ? " ⚡캔슬!" : s.bossPreAttack ? " ⚠️공격 계속!" : "";
               showMsg(`💥 보스 HP: ${"❤️".repeat(s.monster.hp)} 남았다!${cancelTag}${healMsg}`, true);
             }
@@ -1749,6 +1802,18 @@ export default function WildCatch() {
             s.phase = "playing";
             showMsg("🛡️ 보스 이동 중 — 무적!", false);
             s.raf = requestAnimationFrame(loop); return;
+          }
+
+          // ── 회피 판정 (hp=1 최종 포획 시, 골든볼 면제) ──
+          if (ok && s.monster.boss && s.monster.hp <= 1 && !s.ball.golden && (s.monster.dodgeChance ?? 0) > 0) {
+            if (Math.random() < s.monster.dodgeChance) {
+              s.ball.active = false;
+              s.monster.stunTimer = 20;
+              s.phase = "playing";
+              spawnParticles(s.monster.x, s.monster.y, false);
+              showMsg(`💨 회피! ${s.monster.name}이(가) 간신히 피했다! ❤️ 1`, false);
+              s.raf = requestAnimationFrame(loop); return;
+            }
           }
 
           // 파워 포켓몬 최종 타격 — 30~50% 포획 확률
@@ -1905,15 +1970,37 @@ export default function WildCatch() {
             const isPower = Math.random() < 0.5 && powerList.length > 0;
             const pool = isPower ? powerList : regularList;
             const bd = pool[Math.floor(Math.random() * pool.length)];
+
+            // 보스 레벨: charLvl 10단계마다 +1, 최대 15
+            const bossLevel = Math.min(15, 10 + Math.floor(s.charLvl / 10));
+            const hpBonus = Math.floor(s.charLvl / 10);
+
             s.monster.boss = true;
             s.monster.power = !!bd.power;
-            s.monster.hp = bd.power ? 12 : 7;
-            s.monster.level = 10;
+            s.monster.hp = bd.power ? 12 + hpBonus : 7 + hpBonus;
+            s.monster.level = bossLevel;
             s.monster.rarity = "legend";
             s.monster.emoji = "👑";
             s.monster.name = bd.name;
             s.monster.bossType = bd.type;
-            if (s.difficulty !== "easy") { s.monster.vx *= 1.5; s.monster.vy *= 1.5; }
+            s.monster.bossElement = bd.element || "fire";
+            s.monster.agility = bd.agility ?? 1.0;
+            s.monster.attackRate = bd.attackRate ?? 1.0;
+            s.monster.dodgeChance = bd.dodgeChance ?? 0.05;
+
+            // agility가 이동속도에 반영: 하드는 1.5×agility, 이지는 agility만
+            if (s.difficulty !== "easy") {
+              s.monster.vx *= 1.5 * s.monster.agility;
+              s.monster.vy *= 1.5 * s.monster.agility;
+            } else {
+              s.monster.vx *= s.monster.agility;
+              s.monster.vy *= s.monster.agility;
+            }
+
+            // 초기 속도 저장 (점진 감속 기준)
+            s.bossInitialSpd = Math.sqrt(s.monster.vx ** 2 + s.monster.vy ** 2);
+            s.bossHitCount = 0;
+
             // 보스 공격 상태 초기화
             s.bossAttackTimer = 0;
             s.bossPreAttack = null;
@@ -1921,7 +2008,7 @@ export default function WildCatch() {
             if (bd.power) {
               showMsg(`⚡ 파워 포켓몬이 나타났다! (경험치 2배!)`, false);
             } else {
-              showMsg(`👑 ${bd.name} 등장!! 10번 맞춰야 잡힌다!`, false);
+              showMsg(`👑 ${bd.name} 등장!! ${7 + hpBonus}번 맞춰야 잡힌다!`, false);
             }
           } else if (isSpecialSpawn) {
             showMsg("🌟 특별 몬스터 등장!", true);
@@ -2321,7 +2408,10 @@ export default function WildCatch() {
         // ── boss 공격 트리거 (playing 중에만) ──
         if (s.monster && s.monster.boss && s.phase === "playing" && s.freezeTimer <= 0) {
           const isEasy = s.difficulty === "easy";
-          const attackInterval = isEasy ? (s.monster.power ? 300 : 360) : 120;
+          // attackRate 배수 적용 (포켓몬 개성), 최솟값 클램핑으로 너무 빠른 공격 방지
+          const baseInterval = isEasy ? (s.monster.power ? 300 : 360) : 120;
+          const minInterval = isEasy ? 180 : 90;
+          const attackInterval = Math.max(minInterval, Math.round(baseInterval * (s.monster.attackRate ?? 1.0)));
           const warnFrames = isEasy ? 72 : 36;
           const impactR = isEasy ? 48 : 60;
 
