@@ -1271,7 +1271,7 @@ export default function WildCatch() {
       const ec = ELEM_CFG[elem] || ELEM_CFG.fire;
 
       // 발사 전 경고: 바닥에 깜박이는 속성색 타원 (targets 배열 순회)
-      if (s.bossPreAttack) {
+      if (s.bossPreAttack && elem !== "ghost") {
         const { targets, impactR } = s.bossPreAttack;
         const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.04);
         targets.forEach(targetX => {
@@ -2413,7 +2413,10 @@ export default function WildCatch() {
           const baseInterval = isEasy ? (s.monster.power ? 300 : 360) : 120;
           const minInterval = isEasy ? 180 : 90;
           const attackInterval = Math.max(minInterval, Math.round(baseInterval * (s.monster.attackRate ?? 1.0)));
-          const warnFrames = isEasy ? 72 : 36;
+          const bossElem = s.monster.bossElement || "fire";
+          const warnFrames = bossElem === "ghost"
+            ? (isEasy ? 20 : 8)
+            : (isEasy ? 72 : 36);
           const impactR = isEasy ? 48 : 60;
 
           if (!s.bossPreAttack) {
