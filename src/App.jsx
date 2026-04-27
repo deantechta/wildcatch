@@ -1256,16 +1256,17 @@ export default function WildCatch() {
       c.closePath();
     }
 
+    // ── 속성별 색상 테마 (전역 공유) ──
+    const ELEM_CFG = {
+      fire:     { warn: "#FF1744", warnGlow: "#FF1744", warnStroke: "rgba(255,80,80,",     proj: "#FF3D00", projGlow: "#FF6D00", trail: "rgba(255,120,50,0.55)",  aura: "#FF1744" },
+      water:    { warn: "#0288D1", warnGlow: "#29B6F6", warnStroke: "rgba(80,180,255,",    proj: "#0277BD", projGlow: "#4FC3F7", trail: "rgba(100,200,255,0.55)", aura: "#29B6F6" },
+      electric: { warn: "#FFD600", warnGlow: "#FFD600", warnStroke: "rgba(255,230,50,",    proj: "#F9A825", projGlow: "#FFD54F", trail: "rgba(255,240,80,0.55)",  aura: "#FFD600" },
+      ghost:    { warn: "#9C27B0", warnGlow: "#CE93D8", warnStroke: "rgba(180,100,220,",   proj: "#7B1FA2", projGlow: "#BA68C8", trail: "rgba(180,100,220,0.55)", aura: "#CE93D8" },
+      nature:   { warn: "#388E3C", warnGlow: "#81C784", warnStroke: "rgba(100,200,100,",   proj: "#2E7D32", projGlow: "#66BB6A", trail: "rgba(100,200,100,0.55)", aura: "#81C784" },
+    };
+
     // ── boss projectiles & pre-attack warning ──
     function drawBossProjectiles() {
-      // 속성별 색상 테마
-      const ELEM_CFG = {
-        fire:     { warn: "#FF1744", warnGlow: "#FF1744", warnStroke: "rgba(255,80,80,",     proj: "#FF3D00", projGlow: "#FF6D00", trail: "rgba(255,120,50,0.55)" },
-        water:    { warn: "#0288D1", warnGlow: "#29B6F6", warnStroke: "rgba(80,180,255,",    proj: "#0277BD", projGlow: "#4FC3F7", trail: "rgba(100,200,255,0.55)" },
-        electric: { warn: "#FFD600", warnGlow: "#FFD600", warnStroke: "rgba(255,230,50,",    proj: "#F9A825", projGlow: "#FFD54F", trail: "rgba(255,240,80,0.55)"  },
-        ghost:    { warn: "#9C27B0", warnGlow: "#CE93D8", warnStroke: "rgba(180,100,220,",   proj: "#7B1FA2", projGlow: "#BA68C8", trail: "rgba(180,100,220,0.55)" },
-        nature:   { warn: "#388E3C", warnGlow: "#81C784", warnStroke: "rgba(100,200,100,",   proj: "#2E7D32", projGlow: "#66BB6A", trail: "rgba(100,200,100,0.55)" },
-      };
       const elem = s.monster?.bossElement || "fire";
       const ec = ELEM_CFG[elem] || ELEM_CFG.fire;
 
