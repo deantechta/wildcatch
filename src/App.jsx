@@ -1884,7 +1884,7 @@ export default function WildCatch() {
               posthogRef.current?.capture('combo_milestone', { combo: s.combo, difficulty: s.difficulty });
             }
 
-            const scoreMult = (s.difficulty === "easy" ? 1.5 : 1) * (s.doubleNext ? 3 : 1);
+            const scoreMult = (s.difficulty === "easy" ? 1.5 : 2.0) * (s.doubleNext ? 3 : 1);
             if (s.doubleNext) { s.doubleNext = false; showMsg("💫 더블! ×3!", true); }
 
             if (wasBoss) {
