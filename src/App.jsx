@@ -1513,6 +1513,14 @@ export default function WildCatch() {
       ctx.translate(mx, my);
       ctx.scale(pulse, pulse);
 
+      // 하드 모드: 속성 오라 글로우
+      if (s.difficulty !== "easy") {
+        const auraColor = (ELEM_CFG[mon.bossElement] || ELEM_CFG.fire).aura;
+        const auraPulse = 0.5 + 0.5 * Math.sin(t * 0.06);
+        ctx.shadowColor = auraColor;
+        ctx.shadowBlur = 20 + 14 * auraPulse;
+      }
+
       const img = bossImgs.current[mon.name];
       if (img && img.complete && img.naturalWidth > 0) {
         const size = 108;
