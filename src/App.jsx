@@ -1735,16 +1735,16 @@ export default function WildCatch() {
             s.phase = "playing";
             spawnParticles(s.monster.x, s.monster.y, true);
 
-            // ── 하드 모드: 경고 앞 절반에서만 공격 캔슬 가능 ──
+            // ── 하드 모드: 경고 전체 기간 중 공격 캔슬 가능 ──
             let attackCancelled = false;
             if (s.bossPreAttack && s.difficulty !== "easy") {
-              if (s.bossPreAttack.timer > s.bossPreAttack.warnFrames / 3) {
-                // 앞 2/3 타이밍 (0.4초): 캔슬 성공
+              if (s.bossPreAttack.timer > 0) {
+                // 경고 전체 타이밍: 캔슬 성공
                 s.bossPreAttack = null;
                 s.bossAttackTimer = 0;
                 attackCancelled = true;
               }
-              // 뒷 절반 타이밍: 캔슬 실패 — 공격 그대로 진행
+              // 경고 종료: 캔슬 불가 — 공격 그대로 진행
             }
 
             // 직전 피격 위치와 80px 이내 → "같은 자리 연속" 판정 → 순간이동
