@@ -2417,7 +2417,9 @@ export default function WildCatch() {
           const warnFrames = bossElem === "ghost"
             ? (isEasy ? 20 : 8)
             : (isEasy ? 72 : 36);
-          const impactR = isEasy ? 48 : 60;
+          const impactR = bossElem === "water"
+            ? (isEasy ? 64 : 80)
+            : (isEasy ? 48 : 60);
 
           if (!s.bossPreAttack) {
             s.bossAttackTimer++;
@@ -2426,8 +2428,22 @@ export default function WildCatch() {
               const px = s.player.x;
               let targets, attackMsg;
               if (isEasy) {
-                targets = [px];
-                attackMsg = "⚠️ 공격! 빨간 원을 피해!";
+                // easy: 속성별 기본 1~3존
+                if (bossElem === "nature") {
+                  targets = [px - 60, px, px + 60];
+                  attackMsg = "⚠️ 공격! 빨간 원을 피해!";
+                } else {
+                  targets = [px];
+                  attackMsg = "⚠️ 공격! 빨간 원을 피해!";
+                }
+              } else if (bossElem === "electric") {
+                // electric: 5존 (좌우 대칭 번개)
+                targets = [px - 135, px - 67, px, px + 67, px + 135];
+                attackMsg = "⚡ 5존 번개! 피해!";
+              } else if (bossElem === "nature") {
+                // nature: 플레이어 중심 4존 그리드
+                targets = [px - 90, px - 30, px + 30, px + 90];
+                attackMsg = "🌿 4존 공격! 피해!";
               } else if (s.monster.hp <= 5) {
                 targets = [px - 108, px - 36, px + 36, px + 108];
                 attackMsg = "⚠️ 4존 공격! 피해!";
