@@ -205,12 +205,12 @@ const BOSS_MONSTERS = [
   { name: "이상해풀", element: "nature",   agility: 1.0, attackRate: 1.00, dodgeChance: 0.05 },
   { name: "어니부기", element: "water",    agility: 0.8, attackRate: 1.00, dodgeChance: 0.10 },
   { name: "버터플",   element: "nature",   agility: 1.2, attackRate: 1.10, dodgeChance: 0.10 },
-  { name: "아보크",   element: "nature",   agility: 1.1, attackRate: 0.90, dodgeChance: 0.05 },
+  { name: "아보크",   element: "ghost",    agility: 1.1, attackRate: 0.90, dodgeChance: 0.05 },
   { name: "나인테일", power: true,  element: "fire",     agility: 1.2, attackRate: 0.80, dodgeChance: 0.10 },
   { name: "윈디",     element: "electric", agility: 1.3, attackRate: 0.85, dodgeChance: 0.05 },
   { name: "수륙챙이", element: "water",    agility: 0.9, attackRate: 1.00, dodgeChance: 0.10 },
   { name: "우츠보트", element: "nature",   agility: 0.8, attackRate: 1.10, dodgeChance: 0.05 },
-  { name: "독파리",   element: "nature",   agility: 1.2, attackRate: 1.00, dodgeChance: 0.10 },
+  { name: "독파리",   element: "ghost",    agility: 1.2, attackRate: 1.00, dodgeChance: 0.10 },
   { name: "질뻐기",   element: "water",    agility: 0.7, attackRate: 1.20, dodgeChance: 0.10 },
 ];
 
