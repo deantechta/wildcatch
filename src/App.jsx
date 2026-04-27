@@ -205,12 +205,12 @@ const BOSS_MONSTERS = [
   { name: "이상해풀", element: "nature",   agility: 1.0, attackRate: 1.00, dodgeChance: 0.05 },
   { name: "어니부기", element: "water",    agility: 0.8, attackRate: 1.00, dodgeChance: 0.10 },
   { name: "버터플",   element: "nature",   agility: 1.2, attackRate: 1.10, dodgeChance: 0.10 },
-  { name: "아보크",   element: "nature",   agility: 1.1, attackRate: 0.90, dodgeChance: 0.05 },
+  { name: "아보크",   element: "ghost",    agility: 1.1, attackRate: 0.90, dodgeChance: 0.05 },
   { name: "나인테일", power: true,  element: "fire",     agility: 1.2, attackRate: 0.80, dodgeChance: 0.10 },
   { name: "윈디",     element: "electric", agility: 1.3, attackRate: 0.85, dodgeChance: 0.05 },
   { name: "수륙챙이", element: "water",    agility: 0.9, attackRate: 1.00, dodgeChance: 0.10 },
   { name: "우츠보트", element: "nature",   agility: 0.8, attackRate: 1.10, dodgeChance: 0.05 },
-  { name: "독파리",   element: "nature",   agility: 1.2, attackRate: 1.00, dodgeChance: 0.10 },
+  { name: "독파리",   element: "ghost",    agility: 1.2, attackRate: 1.00, dodgeChance: 0.10 },
   { name: "질뻐기",   element: "water",    agility: 0.7, attackRate: 1.20, dodgeChance: 0.10 },
 ];
 
@@ -1256,21 +1256,22 @@ export default function WildCatch() {
       c.closePath();
     }
 
+    // ── 속성별 색상 테마 (전역 공유) ──
+    const ELEM_CFG = {
+      fire:     { warn: "#FF1744", warnGlow: "#FF1744", warnStroke: "rgba(255,80,80,",     proj: "#FF3D00", projGlow: "#FF6D00", trail: "rgba(255,120,50,0.55)",  aura: "#FF1744" },
+      water:    { warn: "#0288D1", warnGlow: "#29B6F6", warnStroke: "rgba(80,180,255,",    proj: "#0277BD", projGlow: "#4FC3F7", trail: "rgba(100,200,255,0.55)", aura: "#29B6F6" },
+      electric: { warn: "#FFD600", warnGlow: "#FFD600", warnStroke: "rgba(255,230,50,",    proj: "#F9A825", projGlow: "#FFD54F", trail: "rgba(255,240,80,0.55)",  aura: "#FFD600" },
+      ghost:    { warn: "#9C27B0", warnGlow: "#CE93D8", warnStroke: "rgba(180,100,220,",   proj: "#7B1FA2", projGlow: "#BA68C8", trail: "rgba(180,100,220,0.55)", aura: "#CE93D8" },
+      nature:   { warn: "#388E3C", warnGlow: "#81C784", warnStroke: "rgba(100,200,100,",   proj: "#2E7D32", projGlow: "#66BB6A", trail: "rgba(100,200,100,0.55)", aura: "#81C784" },
+    };
+
     // ── boss projectiles & pre-attack warning ──
     function drawBossProjectiles() {
-      // 속성별 색상 테마
-      const ELEM_CFG = {
-        fire:     { warn: "#FF1744", warnGlow: "#FF1744", warnStroke: "rgba(255,80,80,",     proj: "#FF3D00", projGlow: "#FF6D00", trail: "rgba(255,120,50,0.55)" },
-        water:    { warn: "#0288D1", warnGlow: "#29B6F6", warnStroke: "rgba(80,180,255,",    proj: "#0277BD", projGlow: "#4FC3F7", trail: "rgba(100,200,255,0.55)" },
-        electric: { warn: "#FFD600", warnGlow: "#FFD600", warnStroke: "rgba(255,230,50,",    proj: "#F9A825", projGlow: "#FFD54F", trail: "rgba(255,240,80,0.55)"  },
-        ghost:    { warn: "#9C27B0", warnGlow: "#CE93D8", warnStroke: "rgba(180,100,220,",   proj: "#7B1FA2", projGlow: "#BA68C8", trail: "rgba(180,100,220,0.55)" },
-        nature:   { warn: "#388E3C", warnGlow: "#81C784", warnStroke: "rgba(100,200,100,",   proj: "#2E7D32", projGlow: "#66BB6A", trail: "rgba(100,200,100,0.55)" },
-      };
       const elem = s.monster?.bossElement || "fire";
       const ec = ELEM_CFG[elem] || ELEM_CFG.fire;
 
       // 발사 전 경고: 바닥에 깜박이는 속성색 타원 (targets 배열 순회)
-      if (s.bossPreAttack) {
+      if (s.bossPreAttack && elem !== "ghost") {
         const { targets, impactR } = s.bossPreAttack;
         const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.04);
         targets.forEach(targetX => {
@@ -1512,6 +1513,14 @@ export default function WildCatch() {
       ctx.translate(mx, my);
       ctx.scale(pulse, pulse);
 
+      // 하드 모드: 속성 오라 글로우
+      if (s.difficulty !== "easy") {
+        const auraColor = (ELEM_CFG[mon.bossElement] || ELEM_CFG.fire).aura;
+        const auraPulse = 0.5 + 0.5 * Math.sin(t * 0.06);
+        ctx.shadowColor = auraColor;
+        ctx.shadowBlur = 20 + 14 * auraPulse;
+      }
+
       const img = bossImgs.current[mon.name];
       if (img && img.complete && img.naturalWidth > 0) {
         const size = 108;
@@ -1735,16 +1744,16 @@ export default function WildCatch() {
             s.phase = "playing";
             spawnParticles(s.monster.x, s.monster.y, true);
 
-            // ── 하드 모드: 경고 앞 절반에서만 공격 캔슬 가능 ──
+            // ── 하드 모드: 경고 전체 기간 중 공격 캔슬 가능 ──
             let attackCancelled = false;
             if (s.bossPreAttack && s.difficulty !== "easy") {
-              if (s.bossPreAttack.timer > s.bossPreAttack.warnFrames / 3) {
-                // 앞 2/3 타이밍 (0.4초): 캔슬 성공
+              if (s.bossPreAttack.timer > 0) {
+                // 경고 전체 타이밍: 캔슬 성공
                 s.bossPreAttack = null;
                 s.bossAttackTimer = 0;
                 attackCancelled = true;
               }
-              // 뒷 절반 타이밍: 캔슬 실패 — 공격 그대로 진행
+              // 경고 종료: 캔슬 불가 — 공격 그대로 진행
             }
 
             // 직전 피격 위치와 80px 이내 → "같은 자리 연속" 판정 → 순간이동
@@ -1884,7 +1893,7 @@ export default function WildCatch() {
               posthogRef.current?.capture('combo_milestone', { combo: s.combo, difficulty: s.difficulty });
             }
 
-            const scoreMult = (s.difficulty === "easy" ? 1.5 : 1) * (s.doubleNext ? 3 : 1);
+            const scoreMult = (s.difficulty === "easy" ? 1.5 : 2.0) * (s.doubleNext ? 3 : 1);
             if (s.doubleNext) { s.doubleNext = false; showMsg("💫 더블! ×3!", true); }
 
             if (wasBoss) {
@@ -2412,8 +2421,13 @@ export default function WildCatch() {
           const baseInterval = isEasy ? (s.monster.power ? 300 : 360) : 120;
           const minInterval = isEasy ? 180 : 90;
           const attackInterval = Math.max(minInterval, Math.round(baseInterval * (s.monster.attackRate ?? 1.0)));
-          const warnFrames = isEasy ? 72 : 36;
-          const impactR = isEasy ? 48 : 60;
+          const bossElem = s.monster.bossElement || "fire";
+          const warnFrames = bossElem === "ghost"
+            ? (isEasy ? 20 : 8)
+            : (isEasy ? 72 : 36);
+          const impactR = bossElem === "water"
+            ? (isEasy ? 64 : 80)
+            : (isEasy ? 48 : 60);
 
           if (!s.bossPreAttack) {
             s.bossAttackTimer++;
@@ -2422,8 +2436,22 @@ export default function WildCatch() {
               const px = s.player.x;
               let targets, attackMsg;
               if (isEasy) {
-                targets = [px];
-                attackMsg = "⚠️ 공격! 빨간 원을 피해!";
+                // easy: 속성별 기본 1~3존
+                if (bossElem === "nature") {
+                  targets = [px - 60, px, px + 60];
+                  attackMsg = "⚠️ 공격! 빨간 원을 피해!";
+                } else {
+                  targets = [px];
+                  attackMsg = "⚠️ 공격! 빨간 원을 피해!";
+                }
+              } else if (bossElem === "electric") {
+                // electric: 5존 (좌우 대칭 번개)
+                targets = [px - 135, px - 67, px, px + 67, px + 135];
+                attackMsg = "⚡ 5존 번개! 피해!";
+              } else if (bossElem === "nature") {
+                // nature: 플레이어 중심 4존 그리드
+                targets = [px - 90, px - 30, px + 30, px + 90];
+                attackMsg = "🌿 4존 공격! 피해!";
               } else if (s.monster.hp <= 5) {
                 targets = [px - 108, px - 36, px + 36, px + 108];
                 attackMsg = "⚠️ 4존 공격! 피해!";
